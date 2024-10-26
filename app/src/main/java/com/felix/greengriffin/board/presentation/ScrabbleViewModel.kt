@@ -5,6 +5,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.felix.greengriffin.BuildConfig
+import com.felix.greengriffin.board.presentation.components.StoneData
 import com.felix.greengriffin.extensions.list.add
 import com.felix.greengriffin.extensions.list.replace
 import com.felix.greengriffin.extensions.list.replaceByNull
@@ -34,6 +35,20 @@ data class ScrabbleState(
             }
         }
 
+    val isValidWordPlacement: Boolean
+        get() {
+            val unLockedStoneIndices = stonesOnBoard.mapIndexed { index, stoneData ->
+                if (stoneData?.isLocked == false) index
+            }
+            val isValidPlacement = false
+            unLockedStoneIndices.forEach { index ->
+
+
+            }
+
+            return true
+        }
+
 
     fun removeStoneFromBoard(id: String): ScrabbleState = copy(
         stonesOnBoard = stonesOnBoard.replaceByNull { stoneOnBoard -> stoneOnBoard?.id == id }
@@ -45,7 +60,6 @@ data class ScrabbleState(
             .replace(index = index, element = stoneData)
         )
 
-
     fun addStoneToHand(stoneData: StoneData): ScrabbleState = copy(
         stonesInHand =
         stonesInHand.add(stoneData, ifNone = { stoneInHand -> stoneInHand.id == stoneData.id })
@@ -56,7 +70,6 @@ data class ScrabbleState(
     )
 
     fun clearEnteredField(): ScrabbleState = copy(enteredField = null)
-
 }
 
 sealed interface ScrabbleEvent {
@@ -70,7 +83,9 @@ sealed interface ScrabbleEvent {
 
     data class FieldEntered(val index: Int) : ScrabbleEvent
     data object DrawStonesClick : ScrabbleEvent
+    data object SubmitClick : ScrabbleEvent
 }
+
 
 class ScrabbleViewModel : ViewModel() {
 
@@ -102,6 +117,8 @@ class ScrabbleViewModel : ViewModel() {
                     )
                 }
             }
+
+            ScrabbleEvent.SubmitClick -> onSubmitClick()
         }
     }
 
@@ -133,22 +150,29 @@ class ScrabbleViewModel : ViewModel() {
         modelName = "gemini-1.5-flash", apiKey = BuildConfig.apiKey
     )
 
+    private fun onSubmitClick() {
+        val word = _state.value.stonesOnBoard.filter { it?.isLocked == false }.map { it?.letter }
+            .joinToString("")
+
+        sendPrompt("Is this a valid german word according to the scrabble rules? Please answer with true or false. No other words. Here the word $word")
+
+    }
 
     fun sendPrompt(
-        bitmap: Bitmap, prompt: String
+        prompt: String
     ) {
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val response = generativeModel.generateContent(content {
-                    image(bitmap)
                     text(prompt)
+                    println("input: $prompt")
                 })
                 response.text?.let { outputContent ->
-
+                    println("output: $outputContent")
                 }
             } catch (e: Exception) {
-
+                println("send prompt failed: $e")
             }
         }
     }

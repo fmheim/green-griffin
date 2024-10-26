@@ -16,11 +16,10 @@ import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
-import com.felix.greengriffin.board.presentation.DraggableStone
 import com.felix.greengriffin.board.presentation.ScrabbleEvent
 import com.felix.greengriffin.board.presentation.ScrabbleEvent.StoneDroppedOnHand
 import com.felix.greengriffin.board.presentation.ScrabbleState
-import com.felix.greengriffin.board.presentation.StoneData
+
 
 @Composable
 fun StonesRow(
