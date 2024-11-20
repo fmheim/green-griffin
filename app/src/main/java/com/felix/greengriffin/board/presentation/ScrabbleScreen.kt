@@ -39,11 +39,13 @@ import com.felix.greengriffin.R
 import com.felix.greengriffin.board.presentation.ScrabbleEvent.StoneDroppedOnBoard
 import com.felix.greengriffin.board.presentation.components.DraggableStone
 import com.felix.greengriffin.board.presentation.components.StoneData
+import com.felix.greengriffin.board.presentation.components.StoneInBag
+import com.felix.greengriffin.board.presentation.components.StoneInHand
+import com.felix.greengriffin.board.presentation.components.StoneOnBoard
 import com.felix.greengriffin.board.presentation.components.StonesRow
 import com.felix.greengriffin.core.presentation.theme.GreenGriffinTheme
 import com.felix.greengriffin.core.presentation.theme.ScrabbleStoneBackground
 import com.felix.greengriffin.core.presentation.theme.ScrabbleStoneText
-import java.util.UUID
 
 
 @Composable
@@ -77,7 +79,7 @@ fun ScrabbleScreen(
             onClick = { onEvent(ScrabbleEvent.DrawStonesClick) }) {
 
 
-            Text(text = "Steine aufüllen", color = ScrabbleStoneText)
+            Text(text = "Steine auffüllen", color = ScrabbleStoneText)
             Spacer(modifier = Modifier.width(8.dp))
             Icon(
                 painter = painterResource(R.drawable.ic_draw_stones),
@@ -129,7 +131,16 @@ fun ScrabbleBoard(
                     .border(width = 1.dp, color = MaterialTheme.colorScheme.onSurface)
                     .dragAndDropTarget(
                         shouldStartDragAndDrop = {
-                            state.stonesOnBoard[index] == null && it
+                            state.isPositionOnBoardAvailable(
+                                columnIndex = getColumnIndex(
+                                    gridIndex = index,
+                                    totalColumns = numColumns
+                                ),
+                                rowIndex = getRowIndex(
+                                    gridIndex = index,
+                                    totalColumns = numColumns
+                                )
+                            ) && it // check if position is taken
                                 .mimeTypes()
                                 .contains(ClipDescription.MIMETYPE_TEXT_PLAIN)
                         },
@@ -141,7 +152,14 @@ fun ScrabbleBoard(
                                         ?: return false
                                     onEvent(
                                         StoneDroppedOnBoard(
-                                            index = index,
+                                            columnIndex = getColumnIndex(
+                                                gridIndex = index,
+                                                totalColumns = numColumns
+                                            ),
+                                            rowIndex = getRowIndex(
+                                                gridIndex = index,
+                                                totalColumns = numColumns
+                                            ),
                                             stoneData = data,
                                         )
                                     )
@@ -154,12 +172,21 @@ fun ScrabbleBoard(
                                 }
                             }
                         }
-                    )
-            ) {
-                state.stonesOnBoard[index]?.let {
-                    DraggableStone(data = it)
+                    ),
+                content = {
+                    state.stonesOnBoard.find { stone ->
+                        stone.columnIndex == getColumnIndex(
+                            gridIndex = index,
+                            totalColumns = numColumns
+                        ) && stone.rowIndex == getRowIndex(
+                            gridIndex = index,
+                            totalColumns = numColumns
+                        )
+                    }?.let {
+                        DraggableStone(data = it)
+                    }
                 }
-            }
+            )
         }
     }
 }
@@ -169,17 +196,35 @@ fun ScrabbleBoard(
 @Composable
 fun ScrabbleScreenPreview() {
     GreenGriffinTheme {
-        ScrabbleScreen(state = ScrabbleState(
-            stonesInHand = listOf(
-                StoneData(letter = 'A', value = 1, id = UUID.randomUUID().toString()),
-                StoneData(letter = 'B', value = 1, id = UUID.randomUUID().toString()),
-                StoneData(letter = 'C', value = 1, id = UUID.randomUUID().toString()),
-                StoneData(letter = 'D', value = 1, id = UUID.randomUUID().toString()),
-                StoneData(letter = 'E', value = 1, id = UUID.randomUUID().toString()),
-                StoneData(letter = 'F', value = 1, id = UUID.randomUUID().toString()),
-                StoneData(letter = 'G', value = 1, id = UUID.randomUUID().toString())
-
-            )
-        ), onEvent = {})
+        ScrabbleScreen(state = previewScrabbleState, onEvent = {})
     }
 }
+
+fun getColumnIndex(gridIndex: Int, totalColumns: Int) = gridIndex % totalColumns
+fun getRowIndex(gridIndex: Int, totalColumns: Int) = gridIndex / totalColumns
+
+val previewScrabbleState = ScrabbleState(
+    stonesInHand = listOf(
+        StoneInHand(letter = 'A', value = 1, id = "stone1", userId = 1),
+        StoneInHand(letter = 'B', value = 3, id = "stone2", userId = 1),
+        StoneInHand(letter = 'C', value = 3, id = "stone3", userId = 1),
+        StoneInHand(letter = 'D', value = 2, id = "stone4", userId = 1),
+        StoneInHand(letter = 'E', value = 1, id = "stone5", userId = 1),
+        StoneInHand(letter = 'F', value = 4, id = "stone6", userId = 1),
+        StoneInHand(letter = 'G', value = 2, id = "stone7", userId = 1)
+    ),
+    stonesOnBoard = setOf(
+        StoneOnBoard(letter = 'H', value = 4, id = "stone8", rowIndex = 7, columnIndex = 7),
+        StoneOnBoard(letter = 'E', value = 1, id = "stone9", rowIndex = 7, columnIndex = 8),
+        StoneOnBoard(letter = 'L', value = 1, id = "stone10", rowIndex = 7, columnIndex = 9),
+        StoneOnBoard(letter = 'L', value = 1, id = "stone11", rowIndex = 7, columnIndex = 10),
+        StoneOnBoard(letter = 'O', value = 1, id = "stone12", rowIndex = 7, columnIndex = 11)
+    ),
+    stonesInBag = setOf(
+        StoneInBag(letter = 'Q', value = 10, id = "stone13"),
+        StoneInBag(letter = 'Z', value = 10, id = "stone14"),
+        StoneInBag(letter = 'J', value = 8, id = "stone15"),
+        StoneInBag(letter = 'X', value = 8, id = "stone16")
+    ),
+    currentUserId = 1
+)

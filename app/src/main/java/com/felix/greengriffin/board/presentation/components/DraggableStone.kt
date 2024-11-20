@@ -1,6 +1,5 @@
 package com.felix.greengriffin.board.presentation.components
 
-import android.annotation.SuppressLint
 import android.content.ClipData
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,14 +29,12 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-@SuppressLint("UnsafeOptInUsageError")
 @Serializable
-data class StoneData(
-    val letter: Char,
-    val value: Int,
-    val id: String,
-    val isLocked: Boolean = false
-) {
+sealed class StoneData {
+    abstract val letter: Char
+    abstract val value: Int
+    abstract val id: String
+
     fun asClipData(): ClipData =
         ClipData.newPlainText("${letter}_$value", Json.encodeToString(this))
 
@@ -49,6 +46,84 @@ data class StoneData(
             null
         }
     }
+}
+
+@Serializable
+data class StoneInBag(
+    override val letter: Char,
+    override val value: Int,
+    override val id: String,
+) : StoneData() {
+
+    fun toStoneInHand( userId: Int) = StoneInHand(
+        letter = letter,
+        value = value,
+        id = id,
+        userId = userId
+    )
+
+    fun toStoneOnBoard(rowIndex: Int, columnIndex: Int) = StoneOnBoard(
+        letter = letter,
+        value = value,
+        id = id,
+        rowIndex = rowIndex,
+        columnIndex = columnIndex
+    )
+}
+
+@Serializable
+data class StoneInHand(
+    override val letter: Char,
+    override val value: Int,
+    override val id: String,
+    val userId: Int
+) : StoneData() {
+
+    fun toStoneInBag() = StoneInBag(
+        letter = letter,
+        value = value,
+        id = id
+    )
+
+    fun toStoneOnBoard(rowIndex: Int, columnIndex: Int) = StoneOnBoard(
+        letter = letter,
+        value = value,
+        id = id,
+        rowIndex = rowIndex,
+        columnIndex = columnIndex
+    )
+}
+
+@Serializable
+data class StoneOnBoard(
+    override val letter: Char,
+    override val value: Int,
+    override val id: String,
+    val rowIndex: Int,
+    val columnIndex: Int,
+    val horizontalContainingWord: List<StoneOnBoard> = emptyList(),
+    val verticalContainingWord: List<StoneOnBoard> = emptyList(),
+) : StoneData() {
+
+    val isLocked get() = horizontalContainingWord.isNotEmpty() || verticalContainingWord.isNotEmpty()
+
+    fun toStoneInBag() = StoneInBag(
+        letter = letter,
+        value = value,
+        id = id
+    )
+
+    fun toStoneInHand(userId: Int) = StoneInHand(
+        letter = letter,
+        value = value,
+        id = id,
+        userId = userId,
+    )
+
+    fun isToLeftOf(other: StoneOnBoard) = columnIndex == other.columnIndex - 1 && rowIndex == other.rowIndex
+    fun isAbove(other: StoneOnBoard) = columnIndex == other.columnIndex && rowIndex == other.rowIndex - 1
+    fun isToRightOf(other: StoneOnBoard) = columnIndex == other.columnIndex + 1 && rowIndex == other.rowIndex
+    fun isBelow(other: StoneOnBoard) = columnIndex == other.columnIndex && rowIndex == other.rowIndex + 1
 }
 
 @Composable
@@ -64,7 +139,7 @@ fun DraggableStone(
         modifier = modifier
             .then(other = if (width != null) Modifier.size(width) else Modifier)
             .dragAndDropSource { // TODO disallow drag for logged in stones
-                detectTapGestures(onPress = { offset ->
+                detectTapGestures(onPress = {
                     startTransfer(
                         transferData = DragAndDropTransferData(
                             clipData = data.asClipData()
@@ -82,7 +157,7 @@ fun DraggableStone(
             maxLines = 1,
             lineHeight = fontSize,
             onTextLayout = {
-                if (it.didOverflowWidth || it.didOverflowHeight || it.hasVisualOverflow) fontSize *= 0.8f
+                if (it.hasVisualOverflow) fontSize *= 0.8f
             },
             fontSize = fontSize,
         )

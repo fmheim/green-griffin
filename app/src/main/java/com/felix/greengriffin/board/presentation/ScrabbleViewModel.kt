@@ -1,14 +1,18 @@
 package com.felix.greengriffin.board.presentation
 
-import android.graphics.Bitmap
+
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.felix.greengriffin.BuildConfig
+import com.felix.greengriffin.board.presentation.ScrabbleState.Alignment.Horizontal
+import com.felix.greengriffin.board.presentation.ScrabbleState.Alignment.Single
+import com.felix.greengriffin.board.presentation.ScrabbleState.Alignment.Unaligned
+import com.felix.greengriffin.board.presentation.ScrabbleState.Alignment.Vertical
 import com.felix.greengriffin.board.presentation.components.StoneData
-import com.felix.greengriffin.extensions.list.add
-import com.felix.greengriffin.extensions.list.replace
-import com.felix.greengriffin.extensions.list.replaceByNull
+import com.felix.greengriffin.board.presentation.components.StoneInBag
+import com.felix.greengriffin.board.presentation.components.StoneInHand
+import com.felix.greengriffin.board.presentation.components.StoneOnBoard
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.content
 import kotlinx.coroutines.Dispatchers
@@ -21,11 +25,34 @@ import java.util.UUID
 
 @Immutable
 data class ScrabbleState(
-    val stonesOnBoard: List<StoneData?> = List(15 * 15) { null },
-    val stonesInHand: List<StoneData> = emptyList(),
-    val stonesInBag: List<StoneData> = emptyList(),
+    val stonesInHand: List<StoneInHand> = emptyList(),
+    val stonesOnBoard: Set<StoneOnBoard> = emptySet(),
+    val stonesInBag: Set<StoneInBag> = emptySet(),
+    val currentUserId: Int = 1,
     val enteredField: Int? = null
 ) {
+    val currentUserStonesInHand get() = stonesInHand.filter { it.userId == currentUserId }
+    val unlockedStonesOnBoard get() = stonesOnBoard.filterNot(StoneOnBoard::isLocked)
+    val unlockedStonesAlignment
+        get() = when {
+            unlockedStonesOnBoard.size == 1 -> Single
+            unlockedStonesOnBoard.areHorizontallyAligned -> Horizontal
+            unlockedStonesOnBoard.areVerticallyAligned -> Vertical
+            else -> Unaligned
+        }
+    val sortedUnlockedStonesOnBoard
+        get() = when (unlockedStonesAlignment) {
+            Horizontal -> unlockedStonesOnBoard.sortedBy(StoneOnBoard::columnIndex)
+            Vertical -> unlockedStonesOnBoard.sortedBy(StoneOnBoard::rowIndex)
+            else -> unlockedStonesOnBoard
+        }
+
+
+    fun isPositionOnBoardAvailable(columnIndex: Int, rowIndex: Int) = stonesOnBoard.none {
+        it.columnIndex == columnIndex
+                && it.rowIndex == rowIndex
+    }
+
     val numberOfStonesToDraw: Int
         get() {
             val missingToFull = 7 - stonesInHand.size
@@ -35,46 +62,91 @@ data class ScrabbleState(
             }
         }
 
+    enum class Alignment {
+        Horizontal, Vertical, Unaligned, Single
+    }
+
     val isValidWordPlacement: Boolean
         get() {
-            val unLockedStoneIndices = stonesOnBoard.mapIndexed { index, stoneData ->
-                if (stoneData?.isLocked == false) index
-            }
-            val isValidPlacement = false
-            unLockedStoneIndices.forEach { index ->
+            if (unlockedStonesOnBoard.isEmpty()) return false // Not valid: Need to place at least one stone
+            if (unlockedStonesAlignment == Unaligned) return false // Not valid: Stones need to be in same row or column
+            var isConnectedToLocked = false
+            val lockedConnectedStones = mutableListOf<StoneData>()
+            for (unlockedStone in sortedUnlockedStonesOnBoard) {
+                val stoneToTheLeft = stonesOnBoard.find { it.isToLeftOf(unlockedStone) }
+                if (stoneToTheLeft?.isLocked == true) {
+                    isConnectedToLocked = true
+                    lockedConnectedStones.add(stoneToTheLeft)
+                    continue
+                }
+
+                val stoneAbove = stonesOnBoard.find { it.isAbove(unlockedStone) }
+                if (stoneAbove?.isLocked == true) {
+                    isConnectedToLocked = true
+                    lockedConnectedStones.add(stoneAbove)
+                    continue
+                }
+
+                val stoneToTheRight = stonesOnBoard.find { it.isToRightOf(unlockedStone) }
+                if (stoneToTheRight?.isLocked == true) {
+                    isConnectedToLocked = true
+                    lockedConnectedStones.add(stoneToTheRight)
+                    continue
+                }
+
+                val stoneBelow = stonesOnBoard.find { it.isBelow(unlockedStone) }
+                if (stoneBelow?.isLocked == true) {
+                    isConnectedToLocked = true
+                    lockedConnectedStones.add(stoneBelow)
+                    continue
+                }
+
+                // Todo continue with logic from sheet
 
 
             }
-
             return true
         }
+// todo do same for other moving operations, think about index of stone in hand, necessary?
 
-
-    fun removeStoneFromBoard(id: String): ScrabbleState = copy(
-        stonesOnBoard = stonesOnBoard.replaceByNull { stoneOnBoard -> stoneOnBoard?.id == id }
-    )
-
-    fun addStoneToBoard(stoneData: StoneData, index: Int): ScrabbleState =
-        copy(stonesOnBoard = stonesOnBoard
-            .replaceByNull { stoneOnBoard -> stoneOnBoard?.id == stoneData.id }
-            .replace(index = index, element = stoneData)
+    fun moveStoneToHand(stone: StoneData): ScrabbleState {
+        val movedStone = when (stone) {
+            is StoneInBag -> stone.toStoneInHand(currentUserId)
+            is StoneOnBoard -> stone.toStoneInHand(currentUserId)
+            is StoneInHand -> return this
+        }
+        return copy(
+            stonesInBag = if (stone is StoneInBag) stonesInBag - stone else stonesInBag,
+            stonesOnBoard = if (stone is StoneOnBoard) stonesOnBoard - stone else stonesOnBoard,
+            stonesInHand = stonesInHand + movedStone
         )
+    }
 
-    fun addStoneToHand(stoneData: StoneData): ScrabbleState = copy(
-        stonesInHand =
-        stonesInHand.add(stoneData, ifNone = { stoneInHand -> stoneInHand.id == stoneData.id })
-    )
-
-    fun removeStoneFromHand(id: String): ScrabbleState = copy(
-        stonesInHand = stonesInHand.filter { it.id != id }
-    )
+    fun moveStoneToBoard(
+        stone: StoneData,
+        rowIndex: Int,
+        columnIndex: Int
+    ): ScrabbleState {
+        val movedStone = when (stone) {
+            is StoneInHand -> stone.toStoneOnBoard(rowIndex, columnIndex)
+            is StoneOnBoard -> stone.copy(rowIndex = rowIndex, columnIndex = columnIndex)
+            is StoneInBag -> return this // todo maybe set error? Invalid operation for stones in the bag
+        }
+        return copy(
+            stonesInHand = if (stone is StoneInHand) stonesInHand - stone else stonesInHand,
+            stonesOnBoard = if (stone is StoneOnBoard) stonesOnBoard + movedStone - stone else stonesOnBoard + movedStone
+        )
+    }
 
     fun clearEnteredField(): ScrabbleState = copy(enteredField = null)
+
 }
 
 sealed interface ScrabbleEvent {
     data class StoneDroppedOnBoard(
-        val stoneData: StoneData, val index: Int
+        val stoneData: StoneData,
+        val columnIndex: Int,
+        val rowIndex: Int
     ) : ScrabbleEvent
 
     data class StoneDroppedOnHand(
@@ -100,38 +172,44 @@ class ScrabbleViewModel : ViewModel() {
 
     fun onEvent(event: ScrabbleEvent) {
         when (event) {
-            is ScrabbleEvent.StoneDroppedOnBoard -> {
-                moveStoneToBoard(event.stoneData, event.index)
-            }
-
             is ScrabbleEvent.FieldEntered -> _state.update { it.copy(enteredField = event.index) }
             is ScrabbleEvent.StoneDroppedOnHand -> moveStoneToHand(event.stoneData)
-
-            ScrabbleEvent.DrawStonesClick -> {
-                val drawnStones =
-                    _state.value.stonesInBag.shuffled().take(_state.value.numberOfStonesToDraw)
-                _state.update {
-                    it.copy(
-                        stonesInBag = it.stonesInBag.filter { !drawnStones.contains(it) },
-                        stonesInHand = it.stonesInHand + drawnStones
-                    )
-                }
-            }
-
+            ScrabbleEvent.DrawStonesClick -> drawStones()
             ScrabbleEvent.SubmitClick -> onSubmitClick()
+            is ScrabbleEvent.StoneDroppedOnBoard -> moveStoneToBoard(
+                stoneData = event.stoneData,
+                rowIndex = event.rowIndex,
+                columnIndex = event.columnIndex
+            )
         }
     }
 
-    private fun moveStoneToBoard(stoneData: StoneData, index: Int) {
+    private fun drawStones() =
+        _state.value
+            .stonesInBag
+            .shuffled()
+            .take(_state.value.numberOfStonesToDraw)
+            .forEach { stone ->
+                _state.update { currentState ->
+                    currentState.moveStoneToHand(stone)
+                }
+            }
+
+
+    private fun moveStoneToBoard(
+        stoneData: StoneData,
+        rowIndex: Int,
+        columnIndex: Int
+    ) {
         println("StoneDroppedOnBoard")
-        _state.value.stonesOnBoard.run {
-            if (getOrNull(index) != null) return
-        }
 
         _state.update { currentState ->
             currentState
-                .removeStoneFromHand(stoneData.id)
-                .addStoneToBoard(stoneData, index)
+                .moveStoneToBoard(
+                    stone = stoneData,
+                    rowIndex = rowIndex,
+                    columnIndex = columnIndex
+                )
         }
     }
 
@@ -139,8 +217,7 @@ class ScrabbleViewModel : ViewModel() {
         println("StoneDroppedOnHand")
         _state.update { currentState ->
             currentState
-                .removeStoneFromBoard(stoneData.id)
-                .addStoneToHand(stoneData)
+                .moveStoneToHand(stoneData)
                 .clearEnteredField()
         }
     }
@@ -151,14 +228,14 @@ class ScrabbleViewModel : ViewModel() {
     )
 
     private fun onSubmitClick() {
-        val word = _state.value.stonesOnBoard.filter { it?.isLocked == false }.map { it?.letter }
+        val word = _state.value.stonesOnBoard.filter { !it.isLocked }.map { it.letter }
             .joinToString("")
 
         sendPrompt("Is this a valid german word according to the scrabble rules? Please answer with true or false. No other words. Here the word $word")
 
     }
 
-    fun sendPrompt(
+    private fun sendPrompt(
         prompt: String
     ) {
 
@@ -178,108 +255,57 @@ class ScrabbleViewModel : ViewModel() {
     }
 }
 
-val initialStonesInBag = listOf(
-    StoneData(letter = 'A', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'A', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'A', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'A', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'A', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'A', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'A', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'A', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'A', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'A', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'Ä', value = 6, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'B', value = 3, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'B', value = 3, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'C', value = 4, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'C', value = 4, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'D', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'D', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'D', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'D', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'E', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'E', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'E', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'E', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'E', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'E', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'E', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'E', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'E', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'E', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'E', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'E', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'F', value = 4, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'F', value = 4, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'G', value = 2, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'G', value = 2, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'G', value = 2, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'H', value = 4, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'H', value = 4, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'I', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'I', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'I', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'I', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'I', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'I', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'J', value = 10, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'K', value = 2, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'K', value = 2, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'K', value = 2, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'K', value = 2, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'L', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'L', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'L', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'L', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'M', value = 3, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'M', value = 3, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'M', value = 3, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'N', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'N', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'N', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'N', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'N', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'N', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'O', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'O', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'O', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'O', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'Ö', value = 8, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'P', value = 4, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'P', value = 4, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'Q', value = 10, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'R', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'R', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'R', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'R', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'R', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'R', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'S', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'S', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'S', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'S', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'S', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'S', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'T', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'T', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'T', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'T', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'T', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'T', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'U', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'U', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'U', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'U', value = 1, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'Ü', value = 6, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'V', value = 6, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'V', value = 6, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'W', value = 3, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'W', value = 3, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'X', value = 10, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'Y', value = 10, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'Z', value = 3, id = UUID.randomUUID().toString()),
-    StoneData(letter = 'Z', value = 3, id = UUID.randomUUID().toString()),
-    StoneData(letter = ' ', value = 0, id = UUID.randomUUID().toString()),
-    StoneData(letter = ' ', value = 0, id = UUID.randomUUID().toString())
+data class LetterProperties(
+    val value: Int,
+    val frequency: Int
 )
+
+val letterPropertiesMap = mapOf(
+    'A' to LetterProperties(frequency = 10, value = 1),
+    'Ä' to LetterProperties(frequency = 1, value = 6),
+    'B' to LetterProperties(frequency = 2, value = 3),
+    'C' to LetterProperties(frequency = 2, value = 4),
+    'D' to LetterProperties(frequency = 4, value = 1),
+    'E' to LetterProperties(frequency = 15, value = 1),
+    'F' to LetterProperties(frequency = 2, value = 4),
+    'G' to LetterProperties(frequency = 3, value = 2),
+    'H' to LetterProperties(frequency = 2, value = 4),
+    'I' to LetterProperties(frequency = 6, value = 1),
+    'J' to LetterProperties(frequency = 1, value = 10),
+    'K' to LetterProperties(frequency = 4, value = 2),
+    'L' to LetterProperties(frequency = 4, value = 1),
+    'M' to LetterProperties(frequency = 3, value = 3),
+    'N' to LetterProperties(frequency = 6, value = 1),
+    'O' to LetterProperties(frequency = 4, value = 1),
+    'Ö' to LetterProperties(frequency = 1, value = 8),
+    'P' to LetterProperties(frequency = 2, value = 4),
+    'Q' to LetterProperties(frequency = 1, value = 10),
+    'R' to LetterProperties(frequency = 6, value = 1),
+    'S' to LetterProperties(frequency = 6, value = 1),
+    'T' to LetterProperties(frequency = 6, value = 1),
+    'U' to LetterProperties(frequency = 4, value = 1),
+    'Ü' to LetterProperties(frequency = 1, value = 6),
+    'V' to LetterProperties(frequency = 2, value = 6),
+    'W' to LetterProperties(frequency = 2, value = 3),
+    'X' to LetterProperties(frequency = 1, value = 10),
+    'Y' to LetterProperties(frequency = 1, value = 10),
+    'Z' to LetterProperties(frequency = 2, value = 3),
+    ' ' to LetterProperties(frequency = 2, value = 0)
+)
+
+val initialStonesInBag: Set<StoneInBag> =
+    letterPropertiesMap.flatMap { (letter, properties) ->
+        List(properties.frequency) {
+            StoneInBag(
+                letter = letter,
+                value = properties.value,
+                id = UUID.randomUUID().toString()
+            )
+        }
+    }.toSet()
+
+
+// StoneListExtensions
+
+val List<StoneOnBoard>.areHorizontallyAligned: Boolean get() = map { it.rowIndex }.toSet().size == 1
+val List<StoneOnBoard>.areVerticallyAligned: Boolean get() = map { it.columnIndex }.toSet().size == 1
