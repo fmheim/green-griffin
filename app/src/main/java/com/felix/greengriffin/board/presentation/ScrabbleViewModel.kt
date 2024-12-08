@@ -13,6 +13,7 @@ import com.felix.greengriffin.board.presentation.components.StoneData
 import com.felix.greengriffin.board.presentation.components.StoneInBag
 import com.felix.greengriffin.board.presentation.components.StoneInHand
 import com.felix.greengriffin.board.presentation.components.StoneOnBoard
+import com.felix.greengriffin.util.extensions.list.isEmptyOrOnlyNulls
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.content
 import kotlinx.coroutines.Dispatchers
@@ -31,9 +32,13 @@ data class ScrabbleState(
     val currentUserId: Int = 1,
     val enteredField: Int? = null
 ) {
+    enum class Alignment {
+        Horizontal, Vertical, Unaligned, Single
+    }
+
     val currentUserStonesInHand get() = stonesInHand.filter { it.userId == currentUserId }
-    val unlockedStonesOnBoard get() = stonesOnBoard.filterNot(StoneOnBoard::isLocked)
-    val unlockedStonesAlignment
+    private val unlockedStonesOnBoard get() = stonesOnBoard.filterNot(StoneOnBoard::isLocked)
+    private val unlockedStonesAlignment
         get() = when {
             unlockedStonesOnBoard.size == 1 -> Single
             unlockedStonesOnBoard.areHorizontallyAligned -> Horizontal
@@ -62,52 +67,37 @@ data class ScrabbleState(
             }
         }
 
-    enum class Alignment {
-        Horizontal, Vertical, Unaligned, Single
-    }
-
     val isValidWordPlacement: Boolean
         get() {
             if (unlockedStonesOnBoard.isEmpty()) return false // Not valid: Need to place at least one stone
             if (unlockedStonesAlignment == Unaligned) return false // Not valid: Stones need to be in same row or column
-            var isConnectedToLocked = false
-            val lockedConnectedStones = mutableListOf<StoneData>()
+            val lockedNeighbourStones = mutableListOf<StoneData>()
             for (unlockedStone in sortedUnlockedStonesOnBoard) {
-                val stoneToTheLeft = stonesOnBoard.find { it.isToLeftOf(unlockedStone) }
-                if (stoneToTheLeft?.isLocked == true) {
-                    isConnectedToLocked = true
-                    lockedConnectedStones.add(stoneToTheLeft)
-                    continue
-                }
+                val neighbourStones = listOf(
+                    stonesOnBoard::find { it.isToLeftOf(unlockedStone) },
+                    stonesOnBoard::find { it.isAbove(unlockedStone) },
+                    stonesOnBoard::find { it.isToRightOf(unlockedStone) },
+                    stonesOnBoard::find { it.isBelow(unlockedStone) }
+                )
 
-                val stoneAbove = stonesOnBoard.find { it.isAbove(unlockedStone) }
-                if (stoneAbove?.isLocked == true) {
-                    isConnectedToLocked = true
-                    lockedConnectedStones.add(stoneAbove)
-                    continue
-                }
-
-                val stoneToTheRight = stonesOnBoard.find { it.isToRightOf(unlockedStone) }
-                if (stoneToTheRight?.isLocked == true) {
-                    isConnectedToLocked = true
-                    lockedConnectedStones.add(stoneToTheRight)
-                    continue
-                }
-
-                val stoneBelow = stonesOnBoard.find { it.isBelow(unlockedStone) }
-                if (stoneBelow?.isLocked == true) {
-                    isConnectedToLocked = true
-                    lockedConnectedStones.add(stoneBelow)
-                    continue
-                }
-
-                // Todo continue with logic from sheet
-
-
+                if (neighbourStones.isEmptyOrOnlyNulls()) return false // Not valid: all stones need to be connected
+                val lockedStones = neighbourStones.filter { it?.isLocked == true }.filterNotNull()
+                lockedNeighbourStones.addAll(lockedStones)
             }
-            return true
+            return lockedNeighbourStones.isNotEmpty() || stonesOnBoard.none { it.isLocked } // connected to a locked stone or first move
         }
-// todo do same for other moving operations, think about index of stone in hand, necessary?
+
+    // TODO maybe also add already locked stones to containingWord
+    fun lockInWord(): ScrabbleState =
+        when (unlockedStonesAlignment) {
+            Horizontal -> copy(stonesOnBoard = stonesOnBoard.map { it.copy(horizontalContainingWord = it.horizontalContainingWord + unlockedStonesOnBoard) }
+                .toSet())
+
+            Vertical -> copy(stonesOnBoard = stonesOnBoard.map { it.copy(verticalContainingWord = it.verticalContainingWord + unlockedStonesOnBoard) }
+                .toSet())
+
+            else -> this
+        }
 
     fun moveStoneToHand(stone: StoneData): ScrabbleState {
         val movedStone = when (stone) {
@@ -228,11 +218,18 @@ class ScrabbleViewModel : ViewModel() {
     )
 
     private fun onSubmitClick() {
-        val word = _state.value.stonesOnBoard.filter { !it.isLocked }.map { it.letter }
-            .joinToString("")
-
-        sendPrompt("Is this a valid german word according to the scrabble rules? Please answer with true or false. No other words. Here the word $word")
-
+        println("SubmitClick")
+        val isValid = _state.value.isValidWordPlacement
+        println("isValid: $isValid")
+        if (isValid) {
+            val word = _state.value.stonesOnBoard.filter { !it.isLocked }.map { it.letter }
+                .joinToString("") // todo add locked stones
+// todo if correct, lock all stones
+            sendPrompt("Is this a valid german word according to the scrabble rules? Please answer with true or false. No other words. Here the word $word")
+        } else {
+            // show error
+            println("Invalid word placement")
+        }
     }
 
     private fun sendPrompt(
@@ -247,6 +244,11 @@ class ScrabbleViewModel : ViewModel() {
                 })
                 response.text?.let { outputContent ->
                     println("output: $outputContent")
+                }
+                if (response.text?.trim()?.lowercase()?.contains("true") == true) {
+                    _state.update {
+                        it.lockInWord()
+                    }
                 }
             } catch (e: Exception) {
                 println("send prompt failed: $e")

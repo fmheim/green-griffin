@@ -44,7 +44,8 @@ android {
             "-opt-in=androidx.compose.ui.test.ExperimentalTestApi",
             "-opt-in=com.google.accompanist.permissions.ExperimentalPermissionsApi",
             "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
-            "-opt-in=kotlinx.coroutines.FlowPreview"
+            "-opt-in=kotlinx.coroutines.FlowPreview",
+            "-opt-in=kotlin.contracts.ExperimentalContracts"
         )
 
     }
