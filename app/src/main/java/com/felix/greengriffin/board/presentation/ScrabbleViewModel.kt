@@ -30,7 +30,9 @@ data class ScrabbleState(
     val stonesOnBoard: Set<StoneOnBoard> = emptySet(),
     val stonesInBag: Set<StoneInBag> = emptySet(),
     val currentUserId: Int = 1,
-    val enteredField: Int? = null
+    val enteredField: Int? = null,
+    val isPromptLoading: Boolean = false,
+    val isCurrentWordValid: Boolean? = null
 ) {
     enum class Alignment {
         Horizontal, Vertical, Unaligned, Single
@@ -86,6 +88,8 @@ data class ScrabbleState(
             }
             return lockedNeighbourStones.isNotEmpty() || stonesOnBoard.none { it.isLocked } // connected to a locked stone or first move
         }
+
+    val isAbleToSubmit: Boolean get() = unlockedStonesOnBoard.isNotEmpty() && isValidWordPlacement
 
     // TODO maybe also add already locked stones to containingWord
     fun lockInWord(): ScrabbleState =
@@ -201,6 +205,17 @@ class ScrabbleViewModel : ViewModel() {
                     columnIndex = columnIndex
                 )
         }
+        
+        onStoneMovedToBoard()
+    }
+
+    private fun onStoneMovedToBoard() {
+        val isValid = _state.value.isValidWordPlacement
+        if (isValid) {
+            val word = _state.value.stonesOnBoard.filter { !it.isLocked }.map { it.letter }
+                .joinToString("")
+            sendPrompt("Is this a valid german word according to the scrabble rules? Please answer with true or false. No other words. Here the word $word")
+        }
     }
 
     private fun moveStoneToHand(stoneData: StoneData) {
@@ -221,21 +236,18 @@ class ScrabbleViewModel : ViewModel() {
         println("SubmitClick")
         val isValid = _state.value.isValidWordPlacement
         println("isValid: $isValid")
-        if (isValid) {
-            val word = _state.value.stonesOnBoard.filter { !it.isLocked }.map { it.letter }
-                .joinToString("") // todo add locked stones
-// todo if correct, lock all stones
-            sendPrompt("Is this a valid german word according to the scrabble rules? Please answer with true or false. No other words. Here the word $word")
-        } else {
+        if (!isValid) {
             // show error
             println("Invalid word placement")
         }
+        // TODO: Implement point calculation and stone locking
     }
 
     private fun sendPrompt(
         prompt: String
     ) {
-
+        _state.update { it.copy(isPromptLoading = true, isCurrentWordValid = null) }
+        
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val response = generativeModel.generateContent(content {
@@ -245,13 +257,17 @@ class ScrabbleViewModel : ViewModel() {
                 response.text?.let { outputContent ->
                     println("output: $outputContent")
                 }
-                if (response.text?.trim()?.lowercase()?.contains("true") == true) {
-                    _state.update {
-                        it.lockInWord()
+                val isValid = response.text?.trim()?.lowercase()?.contains("true") == true
+                _state.update {
+                    if (isValid) {
+                        it.lockInWord().copy(isPromptLoading = false, isCurrentWordValid = true)
+                    } else {
+                        it.copy(isPromptLoading = false, isCurrentWordValid = false)
                     }
                 }
             } catch (e: Exception) {
                 println("send prompt failed: $e")
+                _state.update { it.copy(isPromptLoading = false, isCurrentWordValid = null) }
             }
         }
     }

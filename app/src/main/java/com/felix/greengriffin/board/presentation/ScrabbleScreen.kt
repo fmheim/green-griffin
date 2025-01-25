@@ -3,6 +3,7 @@
 package com.felix.greengriffin.board.presentation
 
 import android.content.ClipDescription
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -21,6 +22,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -46,6 +48,7 @@ import com.felix.greengriffin.board.presentation.components.StonesRow
 import com.felix.greengriffin.core.presentation.theme.GreenGriffinTheme
 import com.felix.greengriffin.core.presentation.theme.ScrabbleStoneBackground
 import com.felix.greengriffin.core.presentation.theme.ScrabbleStoneText
+import androidx.compose.foundation.layout.size
 
 
 @Composable
@@ -59,7 +62,16 @@ fun ScrabbleScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 16.dp, horizontal = 8.dp)
-                .border(width = 2.dp, color = MaterialTheme.colorScheme.onSurface),
+                .border(
+                    width = when{
+                        state.isAbleToSubmit -> 3.dp
+                        else -> 2.dp
+                    },
+                    color = when {
+                        state.isAbleToSubmit -> MaterialTheme.colorScheme.onSurfaceVariant
+                        else -> MaterialTheme.colorScheme.onSurface
+                    }
+                ),
             state = state,
             onEvent = onEvent
         )
@@ -94,17 +106,37 @@ fun ScrabbleScreen(
                 .fillMaxWidth(),
             colors = ButtonDefaults.buttonColors().copy(),
             shape = RoundedCornerShape(8.dp),
-            border = BorderStroke(width = 2.dp, color = ScrabbleStoneBackground),
-            onClick = { onEvent(ScrabbleEvent.SubmitClick) }) {
-
-
+            border = BorderStroke(
+                width = 2.dp,
+                color = when {
+                    state.isCurrentWordValid == true -> MaterialTheme.colorScheme.primary
+                    state.isCurrentWordValid == false -> MaterialTheme.colorScheme.error
+                    else -> ScrabbleStoneBackground
+                }
+            ),
+            enabled = !state.isPromptLoading && state.isAbleToSubmit,
+            onClick = { onEvent(ScrabbleEvent.SubmitClick) }
+        ) {
             Text(text = "Abschicken", color = ScrabbleStoneText)
             Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                painter = painterResource(R.drawable.ic_send),
-                contentDescription = null,
-                tint = ScrabbleStoneText
-            )
+            Crossfade(
+                targetState = state.isPromptLoading,
+                label = "loading_transition"
+            ) { isLoading ->
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = ScrabbleStoneText,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_send),
+                        contentDescription = null,
+                        tint = ScrabbleStoneText
+                    )
+                }
+            }
         }
     }
 }

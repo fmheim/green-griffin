@@ -128,9 +128,9 @@ data class StoneOnBoard(
 
 @Composable
 fun DraggableStone(
-    width: Dp? = null,
     data: StoneData,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    width: Dp? = null,
 ) {
     var fontSize by remember {
         mutableStateOf(45.sp)
