@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -147,13 +148,13 @@ fun DraggableStone(
                     )
                 })
             }
-            .background(color = ScrabbleStoneBackground, shape = RoundedCornerShape(4.dp))
-            .border(width = 2.dp, color = ScrabbleStoneBorder, shape = RoundedCornerShape(4.dp))
+            .background(color = MaterialTheme.colorScheme.secondary, shape = RoundedCornerShape(4.dp))
+            .border(width = 2.dp, color = MaterialTheme.colorScheme.outline, shape = RoundedCornerShape(4.dp))
     ) {
         Text(
             modifier = Modifier.padding(4.dp),
             text = " " + data.letter.toString() + " ",
-            color = ScrabbleStoneText,
+            color = MaterialTheme.colorScheme.onSecondary,
             maxLines = 1,
             lineHeight = fontSize,
             onTextLayout = {
@@ -165,15 +166,14 @@ fun DraggableStone(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .clip(shape = RoundedCornerShape(4.dp))
-                .background(color = ScrabbleStoneBorder)
+                .background(color = MaterialTheme.colorScheme.outline)
         ) {
             Text(
                 modifier = Modifier.padding(1.dp),
-                color = ScrabbleStoneText,
+                color = MaterialTheme.colorScheme.onSecondary,
                 maxLines = 1,
                 text = data.value.toString(), fontSize = 10.sp, lineHeight = 10.sp
             )
         }
-
     }
 }

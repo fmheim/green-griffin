@@ -89,7 +89,7 @@ data class ScrabbleState(
             return lockedNeighbourStones.isNotEmpty() || stonesOnBoard.none { it.isLocked } // connected to a locked stone or first move
         }
 
-    val isAbleToSubmit: Boolean get() = unlockedStonesOnBoard.isNotEmpty() && isValidWordPlacement
+    val isAbleToSubmit: Boolean get() = unlockedStonesOnBoard.isNotEmpty() && isValidWordPlacement && isCurrentWordValid == true
 
     // TODO maybe also add already locked stones to containingWord
     fun lockInWord(): ScrabbleState =

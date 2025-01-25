@@ -15,8 +15,13 @@ private val DarkColorScheme = darkColorScheme(
     onSurfaceVariant = ScrabbleBoardBorderSuccess,
     background = ScrabbleBackground,
     surfaceVariant = ScrabbleStoneBackground,
-    error = Pink40
-
+    error = Pink40,
+    // Additional semantic mappings for Scrabble elements
+    onPrimary = ScrabbleStoneText,
+    onSecondary = ScrabbleStoneText,
+    onBackground = ScrabbleStoneText,
+    outline = ScrabbleStoneBorder,
+    outlineVariant = ScrabbleBoardGridGreen
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -28,7 +33,13 @@ private val LightColorScheme = lightColorScheme(
     onSurfaceVariant = ScrabbleBoardBorderSuccess,
     background = ScrabbleBackground,
     surfaceVariant = ScrabbleStoneBackground,
-    error = Pink40
+    error = Pink40,
+    // Additional semantic mappings for Scrabble elements
+    onPrimary = ScrabbleStoneText,
+    onSecondary = ScrabbleStoneText,
+    onBackground = ScrabbleStoneText,
+    outline = ScrabbleStoneBorder,
+    outlineVariant = ScrabbleBoardGridGreen
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),

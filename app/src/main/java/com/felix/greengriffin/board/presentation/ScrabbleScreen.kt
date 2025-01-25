@@ -87,16 +87,15 @@ fun ScrabbleScreen(
             modifier = Modifier.padding(16.dp),
             colors = ButtonDefaults.buttonColors().copy(),
             shape = RoundedCornerShape(8.dp),
-            border = BorderStroke(width = 2.dp, color = ScrabbleStoneBackground),
+            border = BorderStroke(width = 2.dp, color = MaterialTheme.colorScheme.outline),
             onClick = { onEvent(ScrabbleEvent.DrawStonesClick) }) {
 
-
-            Text(text = "Steine auffüllen", color = ScrabbleStoneText)
+            Text(text = "Steine auffüllen", color = MaterialTheme.colorScheme.onSecondary)
             Spacer(modifier = Modifier.width(8.dp))
             Icon(
                 painter = painterResource(R.drawable.ic_draw_stones),
                 contentDescription = null,
-                tint = ScrabbleStoneText
+                tint = MaterialTheme.colorScheme.onSecondary
             )
         }
         Spacer(modifier = Modifier.weight(1f))
@@ -111,13 +110,13 @@ fun ScrabbleScreen(
                 color = when {
                     state.isCurrentWordValid == true -> MaterialTheme.colorScheme.primary
                     state.isCurrentWordValid == false -> MaterialTheme.colorScheme.error
-                    else -> ScrabbleStoneBackground
+                    else -> MaterialTheme.colorScheme.outline
                 }
             ),
             enabled = !state.isPromptLoading && state.isAbleToSubmit,
             onClick = { onEvent(ScrabbleEvent.SubmitClick) }
         ) {
-            Text(text = "Abschicken", color = ScrabbleStoneText)
+            Text(text = "Abschicken", color = MaterialTheme.colorScheme.onSecondary)
             Spacer(modifier = Modifier.width(8.dp))
             Crossfade(
                 targetState = state.isPromptLoading,
@@ -126,14 +125,14 @@ fun ScrabbleScreen(
                 if (isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
-                        color = ScrabbleStoneText,
+                        color = MaterialTheme.colorScheme.onSecondary,
                         strokeWidth = 2.dp
                     )
                 } else {
                     Icon(
                         painter = painterResource(R.drawable.ic_send),
                         contentDescription = null,
-                        tint = ScrabbleStoneText
+                        tint = MaterialTheme.colorScheme.onSecondary
                     )
                 }
             }
