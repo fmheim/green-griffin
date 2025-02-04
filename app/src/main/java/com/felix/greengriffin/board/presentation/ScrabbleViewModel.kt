@@ -32,7 +32,7 @@ data class ScrabbleState(
     val currentUserId: Int = 1,
     val enteredField: Int? = null,
     val isPromptLoading: Boolean = false,
-    val isCurrentWordValid: Boolean? = null
+    private val isCurrentWordValid: Boolean? = null
 ) {
     enum class Alignment {
         Horizontal, Vertical, Unaligned, Single

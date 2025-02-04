@@ -12,7 +12,7 @@ val Pink40 = Color(0xFF7D5260)
 
 val ScrabbleBoardGreen = Color(0xFF27725A)
 val ScrabbleBoardGridGreen = Color(0xFFA6DAA7)
-val ScrabbleBoardBorderSuccess = Color(0xFF7DFC7E)
+val ScrabbleBoardBorderSuccess = Color(0xFF8BD98D)
 val ScrabbleBackground = Color(0xFF164134)
 
 val ScrabbleStoneBackground = Color(0xFFC0BEA7)

@@ -16,12 +16,14 @@ private val DarkColorScheme = darkColorScheme(
     background = ScrabbleBackground,
     surfaceVariant = ScrabbleStoneBackground,
     error = Pink40,
-    // Additional semantic mappings for Scrabble elements
+
     onPrimary = ScrabbleStoneText,
     onSecondary = ScrabbleStoneText,
     onBackground = ScrabbleStoneText,
     outline = ScrabbleStoneBorder,
-    outlineVariant = ScrabbleBoardGridGreen
+    outlineVariant = ScrabbleBoardGridGreen,
+    primaryContainer = ScrabbleStoneBorder,
+    onPrimaryContainer = ScrabbleStoneText,
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -34,23 +36,17 @@ private val LightColorScheme = lightColorScheme(
     background = ScrabbleBackground,
     surfaceVariant = ScrabbleStoneBackground,
     error = Pink40,
-    // Additional semantic mappings for Scrabble elements
+
     onPrimary = ScrabbleStoneText,
     onSecondary = ScrabbleStoneText,
     onBackground = ScrabbleStoneText,
     outline = ScrabbleStoneBorder,
-    outlineVariant = ScrabbleBoardGridGreen
+    outlineVariant = ScrabbleBoardGridGreen,
+    primaryContainer = ScrabbleStoneBorder,
+    onPrimaryContainer = ScrabbleStoneText,
 
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
-)
+
+    )
 
 @Composable
 fun GreenGriffinTheme(
