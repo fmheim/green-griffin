@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.UUID
 
 
@@ -89,7 +90,11 @@ data class ScrabbleState(
             return lockedNeighbourStones.isNotEmpty() || stonesOnBoard.none { it.isLocked } // connected to a locked stone or first move
         }
 
-    val isAbleToSubmit: Boolean get() = unlockedStonesOnBoard.isNotEmpty() && isValidWordPlacement && isCurrentWordValid == true
+    val isAbleToSubmit: Boolean
+        get() =
+            unlockedStonesOnBoard.isNotEmpty()
+                    && isValidWordPlacement
+                    && isCurrentWordValid == true
 
     // TODO maybe also add already locked stones to containingWord
     fun lockInWord(): ScrabbleState =
@@ -205,15 +210,17 @@ class ScrabbleViewModel : ViewModel() {
                     columnIndex = columnIndex
                 )
         }
-        
+
         onStoneMovedToBoard()
     }
 
     private fun onStoneMovedToBoard() {
         val isValid = _state.value.isValidWordPlacement
         if (isValid) {
-            val word = _state.value.stonesOnBoard.filter { !it.isLocked }.map { it.letter }
-                .joinToString("")
+            val word =
+                _state.value.stonesOnBoard.filter { !it.isLocked }.sortedBy { it.columnIndex }
+                    .map { it.letter }
+                    .joinToString("")
             sendPrompt("Is this a valid german word according to the scrabble rules? Please answer with true or false. No other words. Here the word $word")
         }
     }
@@ -247,27 +254,32 @@ class ScrabbleViewModel : ViewModel() {
         prompt: String
     ) {
         _state.update { it.copy(isPromptLoading = true, isCurrentWordValid = null) }
-        
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val response = generativeModel.generateContent(content {
                     text(prompt)
-                    println("input: $prompt")
                 })
+                println("input: $prompt")
                 response.text?.let { outputContent ->
                     println("output: $outputContent")
                 }
                 val isValid = response.text?.trim()?.lowercase()?.contains("true") == true
-                _state.update {
-                    if (isValid) {
-                        it.lockInWord().copy(isPromptLoading = false, isCurrentWordValid = true)
-                    } else {
-                        it.copy(isPromptLoading = false, isCurrentWordValid = false)
+                viewModelScope.launch(Dispatchers.Main) {
+                    _state.update {
+                        if (isValid) {
+                            it.copy(isPromptLoading = false, isCurrentWordValid = true)
+                        } else {
+                            it.copy(isPromptLoading = false, isCurrentWordValid = false)
+                        }
                     }
                 }
+
             } catch (e: Exception) {
                 println("send prompt failed: $e")
-                _state.update { it.copy(isPromptLoading = false, isCurrentWordValid = null) }
+                viewModelScope.launch(Dispatchers.Main) {
+                    _state.update { it.copy(isPromptLoading = false, isCurrentWordValid = null) }
+                }
             }
         }
     }

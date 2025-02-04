@@ -8,9 +8,11 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -63,6 +65,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.felix.greengriffin.R
 import com.felix.greengriffin.board.presentation.ScrabbleEvent.StoneDroppedOnBoard
@@ -170,9 +173,12 @@ fun ScrabbleScreen(
         Spacer(modifier = Modifier.weight(1f))
 
         AnimatedVisibility(
-            state.isAbleToSubmit, // todo fix state when able to submit
-            enter = slideInVertically(),
-            exit = slideOutVertically()
+            visible = state.isAbleToSubmit,
+            enter = slideInVertically(
+                initialOffsetY = { it },
+                animationSpec = spring(dampingRatio = 0.3f, stiffness = 100f, visibilityThreshold = IntOffset.VisibilityThreshold)
+            ),
+            exit = slideOutVertically(targetOffsetY = { 2*it })
         ) {
             Box(
                 modifier = Modifier
