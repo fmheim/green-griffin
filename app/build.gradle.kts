@@ -49,6 +49,12 @@ android {
         )
 
     }
+
+    kotlin {
+        compilerOptions {
+            freeCompilerArgs.add("-Xwhen-guards")
+        }
+    }
     buildFeatures {
         compose = true
         buildConfig = true

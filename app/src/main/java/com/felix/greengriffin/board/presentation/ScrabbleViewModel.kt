@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.UUID
 
 
@@ -48,7 +47,7 @@ data class ScrabbleState(
             unlockedStonesOnBoard.areVerticallyAligned -> Vertical
             else -> Unaligned
         }
-    val sortedUnlockedStonesOnBoard
+    private val sortedUnlockedStonesOnBoard
         get() = when (unlockedStonesAlignment) {
             Horizontal -> unlockedStonesOnBoard.sortedBy(StoneOnBoard::columnIndex)
             Vertical -> unlockedStonesOnBoard.sortedBy(StoneOnBoard::rowIndex)
@@ -73,7 +72,30 @@ data class ScrabbleState(
     val isValidWordPlacement: Boolean
         get() {
             if (unlockedStonesOnBoard.isEmpty()) return false // Not valid: Need to place at least one stone
-            if (unlockedStonesAlignment == Unaligned) return false // Not valid: Stones need to be in same row or column
+
+            val firstStone = sortedUnlockedStonesOnBoard.first()
+            val lastStone = sortedUnlockedStonesOnBoard.last()
+
+            when (unlockedStonesAlignment) {
+                Unaligned -> return false // Not valid: Stones need to be in same row or column
+                Horizontal -> {
+                    for (columnIndex in firstStone.columnIndex..lastStone.columnIndex) {
+                        if (stonesOnBoard.none { it.columnIndex == columnIndex && it.rowIndex == firstStone.rowIndex }) {
+                            return false // Gap found, placement is invalid
+                        }
+                    }
+                }
+                Vertical -> { // Vertical alignment
+                    for (rowIndex in firstStone.rowIndex..lastStone.rowIndex) {
+                        if (stonesOnBoard.none { it.rowIndex == rowIndex && it.columnIndex == firstStone.columnIndex }) {
+                            return false // Gap found, placement is invalid
+                        }
+                    }
+                }
+
+                Single -> Unit // Continue, single stones can not have gap
+            }
+
             val lockedNeighbourStones = mutableListOf<StoneData>()
             for (unlockedStone in sortedUnlockedStonesOnBoard) {
                 val neighbourStones = listOf(
@@ -107,6 +129,87 @@ data class ScrabbleState(
 
             else -> this
         }
+
+    fun getAllCreatedWords(): List<String> {
+        val createdWords = mutableListOf<String>()
+        // if horizontal -> only one horizontal word but multiple vertical possible
+
+        when (unlockedStonesAlignment) {
+            Horizontal -> {
+                val firstUnlockedStone =
+                    sortedUnlockedStonesOnBoard.firstOrNull() ?: return emptyList()
+                val firstStoneColumnIndex =
+                    findIndexOfFirstLetterOfHorizontalWord(firstUnlockedStone.columnIndex, firstUnlockedStone.rowIndex)
+                val lastStoneColumnIndex = 
+                    findIndexOfLastLetterOfHorizontalWord(firstUnlockedStone.columnIndex, firstUnlockedStone.rowIndex)
+                
+                // Get the horizontal word
+                val horizontalWord = (firstStoneColumnIndex..lastStoneColumnIndex)
+                    .mapNotNull { columnIndex -> 
+                        stonesOnBoard.find { it.columnIndex == columnIndex && it.rowIndex == firstUnlockedStone.rowIndex }?.letter 
+                    }
+                    .joinToString("")
+                
+                if (horizontalWord.length > 1) {
+                    createdWords.add(horizontalWord)
+                }
+
+                // Find vertical words created by each unlocked stone
+                unlockedStonesOnBoard.forEach { unlockedStone ->
+                    // Check if there are any stones above or below
+                    val hasVerticalConnection = stonesOnBoard.any { stone ->
+                        stone.isLocked && stone.columnIndex == unlockedStone.columnIndex &&
+                        (stone.isAbove(unlockedStone) || stone.isBelow(unlockedStone))
+                    }
+
+                    if (hasVerticalConnection) {
+                        // Find the vertical word's boundaries
+                        val firstVerticalIndex = generateSequence(unlockedStone.rowIndex) { it - 1 }
+                            .takeWhile { rowIndex -> 
+                                stonesOnBoard.any { it.columnIndex == unlockedStone.columnIndex && it.rowIndex == rowIndex }
+                            }
+                            .last()
+                            
+                        val lastVerticalIndex = generateSequence(unlockedStone.rowIndex) { it + 1 }
+                            .takeWhile { rowIndex -> 
+                                stonesOnBoard.any { it.columnIndex == unlockedStone.columnIndex && it.rowIndex == rowIndex }
+                            }
+                            .last()
+
+                        // Create the vertical word
+                        val verticalWord = (firstVerticalIndex..lastVerticalIndex)
+                            .mapNotNull { rowIndex ->
+                                stonesOnBoard.find { it.columnIndex == unlockedStone.columnIndex && it.rowIndex == rowIndex }?.letter
+                            }
+                            .joinToString("")
+
+                        if (verticalWord.length > 1) {
+                            createdWords.add(verticalWord)
+                        }
+                    }
+                }
+            }
+            else -> {} // Handle other alignments
+        }
+
+        return createdWords
+    }
+
+    private fun findIndexOfFirstLetterOfHorizontalWord(startColumn: Int, rowIndex: Int): Int {
+        val columnIndexes = stonesOnBoard.associateBy { it.columnIndex to it.rowIndex }
+
+        return generateSequence(startColumn) { it - 1 }
+            .takeWhile { (it to rowIndex) in columnIndexes }
+            .last()
+    }
+
+    private fun findIndexOfLastLetterOfHorizontalWord(startColumn: Int, rowIndex: Int): Int {
+        val columnIndexes = stonesOnBoard.associateBy { it.columnIndex to it.rowIndex }
+
+        return generateSequence(startColumn) { it + 1 }
+            .takeWhile { (it to rowIndex) in columnIndexes }
+            .last()
+    }
 
     fun moveStoneToHand(stone: StoneData): ScrabbleState {
         val movedStone = when (stone) {
@@ -217,11 +320,23 @@ class ScrabbleViewModel : ViewModel() {
     private fun onStoneMovedToBoard() {
         val isValid = _state.value.isValidWordPlacement
         if (isValid) {
-            val word =
-                _state.value.stonesOnBoard.filter { !it.isLocked }.sortedBy { it.columnIndex }
-                    .map { it.letter }
-                    .joinToString("")
-            sendPrompt("Is this a valid german word according to the scrabble rules? Please answer with true or false. No other words. Here the word $word")
+            val words = _state.value.getAllCreatedWords()
+            sendPrompt("Decide if all the given words are valid according to german scrabble rules: $words\n" +
+                    "\n" +
+                    "All words that are listed as keyword entries in the underlying dictionary are permitted." +
+                    "in the dictionary used. This also includes colloquial expressions, foreign words," +
+                    "technical terms etc. The German grammatical forms of these words are also permitted." +
+                    "inflected forms of these words." +
+                    "Abbreviations, names, prefixes and suffixes are not permitted. Also inadmissible are" +
+                    "words that are not included in the dictionary used as a basis, that are written with a hyphen" +
+                    "or which contain an ellipsis." +
+                    "\n" +
+                    "Return only:\n" +
+                    "true\n" +
+                    "or\n" +
+                    "false\n" +
+                    "\n" +
+                    "No other text or explanation.")
         }
     }
 
@@ -241,13 +356,15 @@ class ScrabbleViewModel : ViewModel() {
 
     private fun onSubmitClick() {
         println("SubmitClick")
-        val isValid = _state.value.isValidWordPlacement
+        val isValid = _state.value.isAbleToSubmit
         println("isValid: $isValid")
         if (!isValid) {
             // show error
             println("Invalid word placement")
+            return
         }
-        // TODO: Implement point calculation and stone locking
+        _state.update { it.lockInWord() }
+        // TODO: Implement point calculation
     }
 
     private fun sendPrompt(

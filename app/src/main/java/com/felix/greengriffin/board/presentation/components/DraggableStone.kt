@@ -139,8 +139,10 @@ fun DraggableStone(
     Box(
         modifier = modifier
             .then(other = if (width != null) Modifier.size(width) else Modifier)
-            .dragAndDropSource { // TODO disallow drag for logged in stones
-                detectTapGestures(onPress = {
+            .dragAndDropSource {
+                if(data is StoneOnBoard && data.isLocked) return@dragAndDropSource
+                detectTapGestures(
+                    onPress = {
                     startTransfer(
                         transferData = DragAndDropTransferData(
                             clipData = data.asClipData()
