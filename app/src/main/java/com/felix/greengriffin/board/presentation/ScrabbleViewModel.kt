@@ -320,7 +320,7 @@ class ScrabbleViewModel : ViewModel() {
     private fun onStoneMovedToBoard() {
         val isValid = _state.value.isValidWordPlacement
         if (isValid) {
-            val words = _state.value.getAllCreatedWords()
+            val words = _state.value.getAllCreatedWords() // Todo: Also get vertical words (unlocked)
             sendPrompt("Decide if all the given words are valid according to german scrabble rules: $words\n" +
                     "\n" +
                     "All words that are listed as keyword entries in the underlying dictionary are permitted." +
