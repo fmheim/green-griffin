@@ -135,7 +135,6 @@ data class ScrabbleState(
                     && isValidWordPlacement
                     && isCurrentWordValid == true
 
-    // TODO maybe also add already locked stones to containingWord
     fun lockInWord(): ScrabbleState {
         return copy(
             totalPoints = totalPoints + pointsOfCurrentPlacement,
