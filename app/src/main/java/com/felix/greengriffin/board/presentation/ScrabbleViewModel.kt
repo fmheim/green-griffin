@@ -13,6 +13,8 @@ import com.felix.greengriffin.board.presentation.components.StoneData
 import com.felix.greengriffin.board.presentation.components.StoneInBag
 import com.felix.greengriffin.board.presentation.components.StoneInHand
 import com.felix.greengriffin.board.presentation.components.StoneOnBoard
+import com.felix.greengriffin.board.presentation.components.Word
+import com.felix.greengriffin.board.presentation.components.asWord
 import com.felix.greengriffin.util.extensions.list.isEmptyOrOnlyNulls
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.content
@@ -85,6 +87,7 @@ data class ScrabbleState(
                         }
                     }
                 }
+
                 Vertical -> { // Vertical alignment
                     for (rowIndex in firstStone.rowIndex..lastStone.rowIndex) {
                         if (stonesOnBoard.none { it.rowIndex == rowIndex && it.columnIndex == firstStone.columnIndex }) {
@@ -130,9 +133,9 @@ data class ScrabbleState(
             else -> this
         }
 
-    fun getAllCreatedWords(): List<String> {
+    fun getAllCreatedWords(): List<Word> {
         if (sortedUnlockedStonesOnBoard.isEmpty()) return emptyList()
-        
+
         return when (unlockedStonesAlignment) {
             Horizontal -> getWordsFromHorizontalPlacement()
             Vertical -> getWordsFromVerticalPlacement()
@@ -140,8 +143,8 @@ data class ScrabbleState(
         }
     }
 
-    private fun getWordsFromHorizontalPlacement(): List<String> {
-        val createdWords = mutableListOf<String>()
+    private fun getWordsFromHorizontalPlacement(): List<Word> {
+        val createdWords = mutableListOf<Word>()
         val mainWord = getMainHorizontalWord()
         if (mainWord.length > 1) {
             createdWords.add(mainWord)
@@ -150,8 +153,8 @@ data class ScrabbleState(
         return createdWords
     }
 
-    private fun getWordsFromVerticalPlacement(): List<String> {
-        val createdWords = mutableListOf<String>()
+    private fun getWordsFromVerticalPlacement(): List<Word> {
+        val createdWords = mutableListOf<Word>()
         val mainWord = getMainVerticalWord()
         if (mainWord.length > 1) {
             createdWords.add(mainWord)
@@ -160,33 +163,44 @@ data class ScrabbleState(
         return createdWords
     }
 
-    private fun getMainHorizontalWord(): String {
+    private fun getMainHorizontalWord(): Word {
         val firstUnlockedStone = sortedUnlockedStonesOnBoard.first()
-        val firstStoneColumnIndex = findIndexOfFirstLetterOfHorizontalWord(firstUnlockedStone.columnIndex, firstUnlockedStone.rowIndex)
-        val lastStoneColumnIndex = findIndexOfLastLetterOfHorizontalWord(firstUnlockedStone.columnIndex, firstUnlockedStone.rowIndex)
-        
+        val firstStoneColumnIndex = findIndexOfFirstLetterOfHorizontalWord(
+            firstUnlockedStone.columnIndex,
+            firstUnlockedStone.rowIndex
+        )
+        val lastStoneColumnIndex = findIndexOfLastLetterOfHorizontalWord(
+            firstUnlockedStone.columnIndex,
+            firstUnlockedStone.rowIndex
+        )
+
         return (firstStoneColumnIndex..lastStoneColumnIndex)
-            .mapNotNull { columnIndex -> 
-                stonesOnBoard.find { it.columnIndex == columnIndex && it.rowIndex == firstUnlockedStone.rowIndex }?.letter 
-            }
-            .joinToString("")
+            .mapNotNull { columnIndex ->
+                stonesOnBoard.find { it.columnIndex == columnIndex && it.rowIndex == firstUnlockedStone.rowIndex }
+            }.asWord()
     }
 
-    private fun getMainVerticalWord(): String {
+    private fun getMainVerticalWord(): Word {
         val firstUnlockedStone = sortedUnlockedStonesOnBoard.first()
-        val firstStoneRowIndex = findIndexOfFirstLetterOfVerticalWord(firstUnlockedStone.columnIndex, firstUnlockedStone.rowIndex)
-        val lastStoneRowIndex = findIndexOfLastLetterOfVerticalWord(firstUnlockedStone.columnIndex, firstUnlockedStone.rowIndex)
-        
+        val firstStoneRowIndex = findIndexOfFirstLetterOfVerticalWord(
+            firstUnlockedStone.columnIndex,
+            firstUnlockedStone.rowIndex
+        )
+        val lastStoneRowIndex = findIndexOfLastLetterOfVerticalWord(
+            firstUnlockedStone.columnIndex,
+            firstUnlockedStone.rowIndex
+        )
+
         return (firstStoneRowIndex..lastStoneRowIndex)
-            .mapNotNull { rowIndex -> 
-                stonesOnBoard.find { it.columnIndex == firstUnlockedStone.columnIndex && it.rowIndex == rowIndex }?.letter 
+            .mapNotNull { rowIndex ->
+                stonesOnBoard.find { it.columnIndex == firstUnlockedStone.columnIndex && it.rowIndex == rowIndex }
             }
-            .joinToString("")
+            .asWord()
     }
 
-    private fun getPerpendicularWordsFromHorizontalPlacement(): List<String> {
-        val perpendicularWords = mutableListOf<String>()
-        
+    private fun getPerpendicularWordsFromHorizontalPlacement(): List<Word> {
+        val perpendicularWords = mutableListOf<Word>()
+
         unlockedStonesOnBoard.forEach { unlockedStone ->
             if (hasVerticalConnection(unlockedStone)) {
                 val verticalWord = createVerticalWordAt(unlockedStone)
@@ -195,13 +209,13 @@ data class ScrabbleState(
                 }
             }
         }
-        
+
         return perpendicularWords
     }
 
-    private fun getPerpendicularWordsFromVerticalPlacement(): List<String> {
-        val perpendicularWords = mutableListOf<String>()
-        
+    private fun getPerpendicularWordsFromVerticalPlacement(): List<Word> {
+        val perpendicularWords = mutableListOf<Word>()
+
         unlockedStonesOnBoard.forEach { unlockedStone ->
             if (hasHorizontalConnection(unlockedStone)) {
                 val horizontalWord = createHorizontalWordAt(unlockedStone)
@@ -210,44 +224,48 @@ data class ScrabbleState(
                 }
             }
         }
-        
+
         return perpendicularWords
     }
 
     private fun hasVerticalConnection(stone: StoneOnBoard): Boolean =
         stonesOnBoard.any { lockedStone ->
-            lockedStone.isLocked && 
-            lockedStone.columnIndex == stone.columnIndex &&
-            (lockedStone.isAbove(stone) || lockedStone.isBelow(stone))
+            lockedStone.isLocked &&
+                    lockedStone.columnIndex == stone.columnIndex &&
+                    (lockedStone.isAbove(stone) || lockedStone.isBelow(stone))
         }
 
     private fun hasHorizontalConnection(stone: StoneOnBoard): Boolean =
         stonesOnBoard.any { lockedStone ->
-            lockedStone.isLocked && 
-            lockedStone.rowIndex == stone.rowIndex &&
-            (lockedStone.isToLeftOf(stone) || lockedStone.isToRightOf(stone))
+            lockedStone.isLocked &&
+                    lockedStone.rowIndex == stone.rowIndex &&
+                    (lockedStone.isToLeftOf(stone) || lockedStone.isToRightOf(stone))
         }
 
-    private fun createVerticalWordAt(stone: StoneOnBoard): String {
-        val firstVerticalIndex = findIndexOfFirstLetterOfVerticalWord(stone.columnIndex, stone.rowIndex)
-        val lastVerticalIndex = findIndexOfLastLetterOfVerticalWord(stone.columnIndex, stone.rowIndex)
+    private fun createVerticalWordAt(stone: StoneOnBoard): Word {
+        val firstVerticalIndex =
+            findIndexOfFirstLetterOfVerticalWord(stone.columnIndex, stone.rowIndex)
+        val lastVerticalIndex =
+            findIndexOfLastLetterOfVerticalWord(stone.columnIndex, stone.rowIndex)
 
         return (firstVerticalIndex..lastVerticalIndex)
             .mapNotNull { rowIndex ->
-                stonesOnBoard.find { it.columnIndex == stone.columnIndex && it.rowIndex == rowIndex }?.letter
+                stonesOnBoard.find { it.columnIndex == stone.columnIndex && it.rowIndex == rowIndex }
             }
-            .joinToString("")
+            .asWord()
     }
 
-    private fun createHorizontalWordAt(stone: StoneOnBoard): String {
-        val firstHorizontalIndex = findIndexOfFirstLetterOfHorizontalWord(stone.columnIndex, stone.rowIndex)
-        val lastHorizontalIndex = findIndexOfLastLetterOfHorizontalWord(stone.columnIndex, stone.rowIndex)
+    private fun createHorizontalWordAt(stone: StoneOnBoard): Word {
+        val firstHorizontalIndex =
+            findIndexOfFirstLetterOfHorizontalWord(stone.columnIndex, stone.rowIndex)
+        val lastHorizontalIndex =
+            findIndexOfLastLetterOfHorizontalWord(stone.columnIndex, stone.rowIndex)
 
         return (firstHorizontalIndex..lastHorizontalIndex)
             .mapNotNull { columnIndex ->
-                stonesOnBoard.find { it.columnIndex == columnIndex && it.rowIndex == stone.rowIndex }?.letter
+                stonesOnBoard.find { it.columnIndex == columnIndex && it.rowIndex == stone.rowIndex }
             }
-            .joinToString("")
+            .asWord()
     }
 
     private fun findIndexOfFirstLetterOfHorizontalWord(startColumn: Int, rowIndex: Int): Int {
@@ -391,23 +409,26 @@ class ScrabbleViewModel : ViewModel() {
     private fun onStoneMovedToBoard() {
         val isValid = _state.value.isValidWordPlacement
         if (isValid) {
-            val words = _state.value.getAllCreatedWords() // Todo: Also get vertical words (unlocked)
-            sendPrompt("Decide if all the given words are valid according to german scrabble rules: $words\n" +
-                    "\n" +
-                    "All words that are listed as keyword entries in the underlying dictionary are permitted." +
-                    "in the dictionary used. This also includes colloquial expressions, foreign words," +
-                    "technical terms etc. The German grammatical forms of these words are also permitted." +
-                    "inflected forms of these words." +
-                    "Abbreviations, names, prefixes and suffixes are not permitted. Also inadmissible are" +
-                    "words that are not included in the dictionary used as a basis, that are written with a hyphen" +
-                    "or which contain an ellipsis." +
-                    "\n" +
-                    "Return only:\n" +
-                    "true\n" +
-                    "or\n" +
-                    "false\n" +
-                    "\n" +
-                    "No other text or explanation.")
+            val words =
+                _state.value.getAllCreatedWords() // Todo: Also get vertical words (unlocked)
+            sendPrompt(
+                "Decide if all the given words are valid according to german scrabble rules: $words\n" +
+                        "\n" +
+                        "All words that are listed as keyword entries in the underlying dictionary are permitted." +
+                        "in the dictionary used. This also includes colloquial expressions, foreign words," +
+                        "technical terms etc. The German grammatical forms of these words are also permitted." +
+                        "inflected forms of these words." +
+                        "Abbreviations, names, prefixes and suffixes are not permitted. Also inadmissible are" +
+                        "words that are not included in the dictionary used as a basis, that are written with a hyphen" +
+                        "or which contain an ellipsis." +
+                        "\n" +
+                        "Return only:\n" +
+                        "true\n" +
+                        "or\n" +
+                        "false\n" +
+                        "\n" +
+                        "No other text or explanation."
+            )
         }
     }
 

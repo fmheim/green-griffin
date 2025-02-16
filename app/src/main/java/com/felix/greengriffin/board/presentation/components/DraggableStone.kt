@@ -23,12 +23,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.felix.greengriffin.core.presentation.theme.ScrabbleStoneBackground
-import com.felix.greengriffin.core.presentation.theme.ScrabbleStoneBorder
-import com.felix.greengriffin.core.presentation.theme.ScrabbleStoneText
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+
+data class Word(
+    val letters: List<StoneData>
+) {
+    val points get() = letters.sumOf { it.value }
+    val length get() = letters.size
+    val asString get() = letters.map { it.letter }.joinToString("")
+}
+
+fun List<StoneData>.asWord() = Word(letters = this)
+
 
 @Serializable
 sealed class StoneData {
@@ -56,7 +64,7 @@ data class StoneInBag(
     override val id: String,
 ) : StoneData() {
 
-    fun toStoneInHand( userId: Int) = StoneInHand(
+    fun toStoneInHand(userId: Int) = StoneInHand(
         letter = letter,
         value = value,
         id = id,
@@ -121,10 +129,17 @@ data class StoneOnBoard(
         userId = userId,
     )
 
-    fun isToLeftOf(other: StoneOnBoard) = columnIndex == other.columnIndex - 1 && rowIndex == other.rowIndex
-    fun isAbove(other: StoneOnBoard) = columnIndex == other.columnIndex && rowIndex == other.rowIndex - 1
-    fun isToRightOf(other: StoneOnBoard) = columnIndex == other.columnIndex + 1 && rowIndex == other.rowIndex
-    fun isBelow(other: StoneOnBoard) = columnIndex == other.columnIndex && rowIndex == other.rowIndex + 1
+    fun isToLeftOf(other: StoneOnBoard) =
+        columnIndex == other.columnIndex - 1 && rowIndex == other.rowIndex
+
+    fun isAbove(other: StoneOnBoard) =
+        columnIndex == other.columnIndex && rowIndex == other.rowIndex - 1
+
+    fun isToRightOf(other: StoneOnBoard) =
+        columnIndex == other.columnIndex + 1 && rowIndex == other.rowIndex
+
+    fun isBelow(other: StoneOnBoard) =
+        columnIndex == other.columnIndex && rowIndex == other.rowIndex + 1
 }
 
 @Composable
@@ -140,18 +155,25 @@ fun DraggableStone(
         modifier = modifier
             .then(other = if (width != null) Modifier.size(width) else Modifier)
             .dragAndDropSource {
-                if(data is StoneOnBoard && data.isLocked) return@dragAndDropSource
+                if (data is StoneOnBoard && data.isLocked) return@dragAndDropSource
                 detectTapGestures(
                     onPress = {
-                    startTransfer(
-                        transferData = DragAndDropTransferData(
-                            clipData = data.asClipData()
+                        startTransfer(
+                            transferData = DragAndDropTransferData(
+                                clipData = data.asClipData()
+                            )
                         )
-                    )
-                })
+                    })
             }
-            .background(color = MaterialTheme.colorScheme.secondary, shape = RoundedCornerShape(4.dp))
-            .border(width = 2.dp, color = MaterialTheme.colorScheme.outline, shape = RoundedCornerShape(4.dp))
+            .background(
+                color = MaterialTheme.colorScheme.secondary,
+                shape = RoundedCornerShape(4.dp)
+            )
+            .border(
+                width = 2.dp,
+                color = MaterialTheme.colorScheme.outline,
+                shape = RoundedCornerShape(4.dp)
+            )
     ) {
         Text(
             modifier = Modifier.padding(4.dp),
