@@ -137,11 +137,9 @@ data class ScrabbleState(
 
     // TODO maybe also add already locked stones to containingWord
     fun lockInWord(): ScrabbleState {
-        val newTotalPoints = totalPoints + pointsOfCurrentPlacement
-
-          return copy(
-              totalPoints = newTotalPoints,
-              stonesOnBoard = stonesOnBoard.map { it.copy(isLocked = true) }.toSet()
+        return copy(
+            totalPoints = totalPoints + pointsOfCurrentPlacement,
+            stonesOnBoard = stonesOnBoard.map { it.copy(isLocked = true) }.toSet()
         )
     }
 
@@ -164,19 +162,19 @@ data class ScrabbleState(
     private fun getWordsFromSinglePlacement(): List<Word> {
         val createdWords = mutableListOf<Word>()
         val singleStone = sortedUnlockedStonesOnBoard.first()
-        
+
         // Check for horizontal word
         if (hasHorizontalConnection(singleStone)) {
             val horizontalWord = createHorizontalWordAt(singleStone)
             createdWords.add(horizontalWord)
         }
-        
+
         // Check for vertical word
         if (hasVerticalConnection(singleStone)) {
             val verticalWord = createVerticalWordAt(singleStone)
             createdWords.add(verticalWord)
         }
-        
+
         return createdWords
     }
 
@@ -424,7 +422,8 @@ class ScrabbleViewModel : ViewModel() {
     private fun onStoneMovedToBoard() {
         val isValid = _state.value.isValidWordPlacement
         if (isValid) {
-            val words = _state.value.newlyCreatedWordsAsStrings // Todo: Also get vertical words (unlocked)
+            val words =
+                _state.value.newlyCreatedWordsAsStrings // Todo: Also get vertical words (unlocked)
             sendPrompt(
                 "Decide if all the given words are valid according to german scrabble rules: $words\n" +
                         "\n" +
