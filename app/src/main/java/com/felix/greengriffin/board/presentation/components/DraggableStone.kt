@@ -68,7 +68,7 @@ data class StoneInBag(
         letter = letter,
         value = value,
         id = id,
-        userId = userId
+        userId = userId,
     )
 
     fun toStoneOnBoard(rowIndex: Int, columnIndex: Int) = StoneOnBoard(
@@ -76,7 +76,8 @@ data class StoneInBag(
         value = value,
         id = id,
         rowIndex = rowIndex,
-        columnIndex = columnIndex
+        columnIndex = columnIndex,
+        isLocked = false
     )
 }
 
@@ -99,7 +100,8 @@ data class StoneInHand(
         value = value,
         id = id,
         rowIndex = rowIndex,
-        columnIndex = columnIndex
+        columnIndex = columnIndex,
+        isLocked = false
     )
 }
 
@@ -110,11 +112,8 @@ data class StoneOnBoard(
     override val id: String,
     val rowIndex: Int,
     val columnIndex: Int,
-    val horizontalContainingWord: List<StoneOnBoard> = emptyList(),
-    val verticalContainingWord: List<StoneOnBoard> = emptyList(),
+    val isLocked: Boolean,
 ) : StoneData() {
-
-    val isLocked get() = horizontalContainingWord.isNotEmpty() || verticalContainingWord.isNotEmpty()
 
     fun toStoneInBag() = StoneInBag(
         letter = letter,

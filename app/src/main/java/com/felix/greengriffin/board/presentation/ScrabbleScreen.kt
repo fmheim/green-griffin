@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -58,7 +57,6 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.graphicsLayer
@@ -348,6 +346,8 @@ fun getColumnIndex(gridIndex: Int, totalColumns: Int) = gridIndex % totalColumns
 fun getRowIndex(gridIndex: Int, totalColumns: Int) = gridIndex / totalColumns
 
 val previewScrabbleState = ScrabbleState(
+    isCurrentWordValid = true,
+    totalPoints,
     stonesInHand = listOf(
         StoneInHand(letter = 'A', value = 1, id = "stone1", userId = 1),
         StoneInHand(letter = 'B', value = 3, id = "stone2", userId = 1),
@@ -358,11 +358,11 @@ val previewScrabbleState = ScrabbleState(
         StoneInHand(letter = 'G', value = 2, id = "stone7", userId = 1)
     ),
     stonesOnBoard = setOf(
-        StoneOnBoard(letter = 'H', value = 4, id = "stone8", rowIndex = 7, columnIndex = 7),
-        StoneOnBoard(letter = 'E', value = 1, id = "stone9", rowIndex = 7, columnIndex = 8),
-        StoneOnBoard(letter = 'L', value = 1, id = "stone10", rowIndex = 7, columnIndex = 9),
-        StoneOnBoard(letter = 'L', value = 1, id = "stone11", rowIndex = 7, columnIndex = 10),
-        StoneOnBoard(letter = 'O', value = 1, id = "stone12", rowIndex = 7, columnIndex = 11)
+        StoneOnBoard(letter = 'H', value = 4, id = "stone8", rowIndex = 7, columnIndex = 7, isLocked = true),
+        StoneOnBoard(letter = 'E', value = 1, id = "stone9", rowIndex = 7, columnIndex = 8, isLocked = true),
+        StoneOnBoard(letter = 'L', value = 1, id = "stone10", rowIndex = 7, columnIndex = 9, isLocked = true),
+        StoneOnBoard(letter = 'L', value = 1, id = "stone11", rowIndex = 7, columnIndex = 10, isLocked = true),
+        StoneOnBoard(letter = 'O', value = 1, id = "stone12", rowIndex = 7, columnIndex = 11, isLocked = false)
     ),
     stonesInBag = setOf(
         StoneInBag(letter = 'Q', value = 10, id = "stone13"),

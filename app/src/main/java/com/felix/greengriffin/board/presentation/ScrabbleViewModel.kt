@@ -138,16 +138,10 @@ data class ScrabbleState(
     // TODO maybe also add already locked stones to containingWord
     fun lockInWord(): ScrabbleState {
         val newTotalPoints = totalPoints + pointsOfCurrentPlacement
-        return when (unlockedStonesAlignment) {
-            Horizontal -> copy(stonesOnBoard = stonesOnBoard.map { it.copy(horizontalContainingWord = it.horizontalContainingWord + unlockedStonesOnBoard) }
-                .toSet())
 
-            Vertical -> copy(stonesOnBoard = stonesOnBoard.map { it.copy(verticalContainingWord = it.verticalContainingWord + unlockedStonesOnBoard) }
-                .toSet())
-// todo handle when one stone only
-            else -> this
-        }.copy(
-            totalPoints = newTotalPoints,
+          return copy(
+              totalPoints = newTotalPoints,
+              stonesOnBoard = stonesOnBoard.map { it.copy(isLocked = true) }.toSet()
         )
     }
 
