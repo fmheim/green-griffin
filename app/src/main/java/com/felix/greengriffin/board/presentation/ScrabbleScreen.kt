@@ -347,7 +347,7 @@ fun getRowIndex(gridIndex: Int, totalColumns: Int) = gridIndex / totalColumns
 
 val previewScrabbleState = ScrabbleState(
     isCurrentWordValid = true,
-    totalPoints,
+    totalPoints = 42,
     stonesInHand = listOf(
         StoneInHand(letter = 'A', value = 1, id = "stone1", userId = 1),
         StoneInHand(letter = 'B', value = 3, id = "stone2", userId = 1),
