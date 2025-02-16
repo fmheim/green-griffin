@@ -4,16 +4,23 @@ package com.felix.greengriffin.board.presentation
 
 
 import android.content.ClipDescription
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
@@ -66,6 +73,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.felix.greengriffin.R
 import com.felix.greengriffin.board.presentation.ScrabbleEvent.StoneDroppedOnBoard
 import com.felix.greengriffin.board.presentation.components.DraggableStone
@@ -124,6 +132,7 @@ fun Modifier.animatedGradientBrush(
 }
 
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun ScrabbleScreen(
     modifier: Modifier = Modifier,
@@ -138,9 +147,40 @@ fun ScrabbleScreen(
             horizontalArrangement = Arrangement.End
         ) {
             Text(
-                text = "Score: ${state.totalPoints}",
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = "Score: ",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 16.sp
             )
+            AnimatedContent(
+                targetState = state.totalPoints,
+                transitionSpec = {
+                    ContentTransform(
+                        targetContentEnter =
+                            slideInVertically(
+                                initialOffsetY = { -2 * it },
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                )
+                            ) + fadeIn(),
+                        initialContentExit = slideOutVertically(
+                            animationSpec = tween(
+                                5000,
+                                easing = FastOutLinearInEasing,
+                                delayMillis = 0
+                            ),
+                            targetOffsetY = { 200 * it }),
+                        sizeTransform = SizeTransform(clip = false)
+                    )
+                },
+                label = "score_animation"
+            ) { points ->
+                Text(
+                    text = points.toString(),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 16.sp
+                )
+            }
         }
         ScrabbleBoard(
             modifier = Modifier
@@ -358,11 +398,46 @@ val previewScrabbleState = ScrabbleState(
         StoneInHand(letter = 'G', value = 2, id = "stone7", userId = 1)
     ),
     stonesOnBoard = setOf(
-        StoneOnBoard(letter = 'H', value = 4, id = "stone8", rowIndex = 7, columnIndex = 7, isLocked = true),
-        StoneOnBoard(letter = 'E', value = 1, id = "stone9", rowIndex = 7, columnIndex = 8, isLocked = true),
-        StoneOnBoard(letter = 'L', value = 1, id = "stone10", rowIndex = 7, columnIndex = 9, isLocked = true),
-        StoneOnBoard(letter = 'L', value = 1, id = "stone11", rowIndex = 7, columnIndex = 10, isLocked = true),
-        StoneOnBoard(letter = 'O', value = 1, id = "stone12", rowIndex = 7, columnIndex = 11, isLocked = false)
+        StoneOnBoard(
+            letter = 'H',
+            value = 4,
+            id = "stone8",
+            rowIndex = 7,
+            columnIndex = 7,
+            isLocked = true
+        ),
+        StoneOnBoard(
+            letter = 'E',
+            value = 1,
+            id = "stone9",
+            rowIndex = 7,
+            columnIndex = 8,
+            isLocked = true
+        ),
+        StoneOnBoard(
+            letter = 'L',
+            value = 1,
+            id = "stone10",
+            rowIndex = 7,
+            columnIndex = 9,
+            isLocked = true
+        ),
+        StoneOnBoard(
+            letter = 'L',
+            value = 1,
+            id = "stone11",
+            rowIndex = 7,
+            columnIndex = 10,
+            isLocked = true
+        ),
+        StoneOnBoard(
+            letter = 'O',
+            value = 1,
+            id = "stone12",
+            rowIndex = 7,
+            columnIndex = 11,
+            isLocked = false
+        )
     ),
     stonesInBag = setOf(
         StoneInBag(letter = 'Q', value = 10, id = "stone13"),
