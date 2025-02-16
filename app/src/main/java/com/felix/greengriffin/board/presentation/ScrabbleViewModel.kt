@@ -34,6 +34,7 @@ data class ScrabbleState(
     val currentUserId: Int = 1,
     val enteredField: Int? = null,
     val isPromptLoading: Boolean = false,
+    val totalPoints: Long = 0,
     private val isCurrentWordValid: Boolean? = null
 ) {
     enum class Alignment {
@@ -122,26 +123,36 @@ data class ScrabbleState(
                     && isCurrentWordValid == true
 
     // TODO maybe also add already locked stones to containingWord
-    fun lockInWord(): ScrabbleState =
-        when (unlockedStonesAlignment) {
+    fun lockInWord(): ScrabbleState {
+        val newTotalPoints = totalPoints + pointsOfCurrentPlacement
+        return when (unlockedStonesAlignment) {
             Horizontal -> copy(stonesOnBoard = stonesOnBoard.map { it.copy(horizontalContainingWord = it.horizontalContainingWord + unlockedStonesOnBoard) }
                 .toSet())
 
             Vertical -> copy(stonesOnBoard = stonesOnBoard.map { it.copy(verticalContainingWord = it.verticalContainingWord + unlockedStonesOnBoard) }
                 .toSet())
-
+// todo handle when one stone only
             else -> this
-        }
-
-    fun getAllCreatedWords(): List<Word> {
-        if (sortedUnlockedStonesOnBoard.isEmpty()) return emptyList()
-
-        return when (unlockedStonesAlignment) {
-            Horizontal -> getWordsFromHorizontalPlacement()
-            Vertical -> getWordsFromVerticalPlacement()
-            else -> emptyList() // Single stones or unaligned stones don't create words
-        }
+        }.copy(
+            totalPoints = newTotalPoints,
+        )
     }
+
+    val newlyCreatedWords: List<Word>
+        get() {
+            if (sortedUnlockedStonesOnBoard.isEmpty()) return emptyList()
+
+            return when (unlockedStonesAlignment) {
+                Horizontal -> getWordsFromHorizontalPlacement()
+                Vertical -> getWordsFromVerticalPlacement()
+                // todo handle when one stone only
+                else -> emptyList() //
+            }
+        }
+
+    val newlyCreatedWordsAsStrings: List<String> get() = newlyCreatedWords.map { it.asString }
+
+    val pointsOfCurrentPlacement: Int get() = newlyCreatedWords.sumOf { it.points }
 
     private fun getWordsFromHorizontalPlacement(): List<Word> {
         val createdWords = mutableListOf<Word>()
@@ -409,8 +420,7 @@ class ScrabbleViewModel : ViewModel() {
     private fun onStoneMovedToBoard() {
         val isValid = _state.value.isValidWordPlacement
         if (isValid) {
-            val words =
-                _state.value.getAllCreatedWords() // Todo: Also get vertical words (unlocked)
+            val words = _state.value.newlyCreatedWordsAsStrings // Todo: Also get vertical words (unlocked)
             sendPrompt(
                 "Decide if all the given words are valid according to german scrabble rules: $words\n" +
                         "\n" +
@@ -456,7 +466,6 @@ class ScrabbleViewModel : ViewModel() {
             return
         }
         _state.update { it.lockInWord() }
-        // TODO: Implement point calculation
     }
 
     private fun sendPrompt(

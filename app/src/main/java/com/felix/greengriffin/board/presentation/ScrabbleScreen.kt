@@ -53,6 +53,7 @@ import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
@@ -132,10 +133,22 @@ fun ScrabbleScreen(
     onEvent: (ScrabbleEvent) -> Unit
 ) {
     Column(modifier = modifier) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.End
+        ) {
+            Text(
+                text = "Score: ${state.totalPoints}",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         ScrabbleBoard(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 16.dp, horizontal = 8.dp)
+                .padding(horizontal = 8.dp)
+                .padding(bottom = 16.dp)
                 .border(
                     width = when {
                         state.isAbleToSubmit -> 3.dp
@@ -176,27 +189,43 @@ fun ScrabbleScreen(
             visible = state.isAbleToSubmit,
             enter = slideInVertically(
                 initialOffsetY = { it },
-                animationSpec = spring(dampingRatio = 0.3f, stiffness = 100f, visibilityThreshold = IntOffset.VisibilityThreshold)
+                animationSpec = spring(
+                    dampingRatio = 0.3f,
+                    stiffness = 100f,
+                    visibilityThreshold = IntOffset.VisibilityThreshold
+                )
             ),
-            exit = slideOutVertically(targetOffsetY = { 2*it })
+            exit = slideOutVertically(targetOffsetY = { 2 * it })
         ) {
             Box(
                 modifier = Modifier
                     .padding(16.dp)
                     .animatedGradientBrush()
-                    .fillMaxWidth()
-                    .clickable { onEvent(ScrabbleEvent.SubmitClick) },
+                    .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
                 Row(
                     horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(30.dp))
+                        .border(
+                            width = 2.dp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            shape = RoundedCornerShape(30.dp)
+                        )
+                        .clickable { onEvent(ScrabbleEvent.SubmitClick) }
+                        .padding(16.dp)
                 ) {
 
                     Text(
                         modifier = Modifier,
                         text = "Abschicken",
-                        color = MaterialTheme.colorScheme.onSecondary,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        modifier = Modifier,
+                        text = "(${state.pointsOfCurrentPlacement} Punkte)",
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Crossfade(
