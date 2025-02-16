@@ -38,7 +38,7 @@ data class ScrabbleState(
     private val isCurrentWordValid: Boolean? = null
 ) {
     enum class Alignment {
-        Horizontal, Vertical, Unaligned, Single
+        Horizontal, Vertical, Single, Unaligned
     }
 
     val currentUserStonesInHand get() = stonesInHand.filter { it.userId == currentUserId }
@@ -57,6 +57,19 @@ data class ScrabbleState(
             else -> unlockedStonesOnBoard
         }
 
+    private fun hasVerticalConnection(stone: StoneOnBoard): Boolean =
+        stonesOnBoard.any { lockedStone ->
+            lockedStone.isLocked &&
+                    lockedStone.columnIndex == stone.columnIndex &&
+                    (lockedStone.isAbove(stone) || lockedStone.isBelow(stone))
+        }
+
+    private fun hasHorizontalConnection(stone: StoneOnBoard): Boolean =
+        stonesOnBoard.any { lockedStone ->
+            lockedStone.isLocked &&
+                    lockedStone.rowIndex == stone.rowIndex &&
+                    (lockedStone.isToLeftOf(stone) || lockedStone.isToRightOf(stone))
+        }
 
     fun isPositionOnBoardAvailable(columnIndex: Int, rowIndex: Int) = stonesOnBoard.none {
         it.columnIndex == columnIndex
@@ -145,8 +158,8 @@ data class ScrabbleState(
             return when (unlockedStonesAlignment) {
                 Horizontal -> getWordsFromHorizontalPlacement()
                 Vertical -> getWordsFromVerticalPlacement()
-                // todo handle when one stone only
-                else -> emptyList() //
+                Single -> getWordsFromSinglePlacement()
+                else -> emptyList()
             }
         }
 
@@ -154,12 +167,29 @@ data class ScrabbleState(
 
     val pointsOfCurrentPlacement: Int get() = newlyCreatedWords.sumOf { it.points }
 
+    private fun getWordsFromSinglePlacement(): List<Word> {
+        val createdWords = mutableListOf<Word>()
+        val singleStone = sortedUnlockedStonesOnBoard.first()
+        
+        // Check for horizontal word
+        if (hasHorizontalConnection(singleStone)) {
+            val horizontalWord = createHorizontalWordAt(singleStone)
+            createdWords.add(horizontalWord)
+        }
+        
+        // Check for vertical word
+        if (hasVerticalConnection(singleStone)) {
+            val verticalWord = createVerticalWordAt(singleStone)
+            createdWords.add(verticalWord)
+        }
+        
+        return createdWords
+    }
+
     private fun getWordsFromHorizontalPlacement(): List<Word> {
         val createdWords = mutableListOf<Word>()
         val mainWord = getMainHorizontalWord()
-        if (mainWord.length > 1) {
-            createdWords.add(mainWord)
-        }
+        createdWords.add(mainWord)
         createdWords.addAll(getPerpendicularWordsFromHorizontalPlacement())
         return createdWords
     }
@@ -167,11 +197,35 @@ data class ScrabbleState(
     private fun getWordsFromVerticalPlacement(): List<Word> {
         val createdWords = mutableListOf<Word>()
         val mainWord = getMainVerticalWord()
-        if (mainWord.length > 1) {
-            createdWords.add(mainWord)
-        }
+        createdWords.add(mainWord)
         createdWords.addAll(getPerpendicularWordsFromVerticalPlacement())
         return createdWords
+    }
+
+    private fun getPerpendicularWordsFromHorizontalPlacement(): List<Word> {
+        val perpendicularWords = mutableListOf<Word>()
+
+        unlockedStonesOnBoard.forEach { unlockedStone ->
+            if (hasVerticalConnection(unlockedStone)) {
+                val verticalWord = createVerticalWordAt(unlockedStone)
+                perpendicularWords.add(verticalWord)
+            }
+        }
+
+        return perpendicularWords
+    }
+
+    private fun getPerpendicularWordsFromVerticalPlacement(): List<Word> {
+        val perpendicularWords = mutableListOf<Word>()
+
+        unlockedStonesOnBoard.forEach { unlockedStone ->
+            if (hasHorizontalConnection(unlockedStone)) {
+                val horizontalWord = createHorizontalWordAt(unlockedStone)
+                perpendicularWords.add(horizontalWord)
+            }
+        }
+
+        return perpendicularWords
     }
 
     private fun getMainHorizontalWord(): Word {
@@ -208,50 +262,6 @@ data class ScrabbleState(
             }
             .asWord()
     }
-
-    private fun getPerpendicularWordsFromHorizontalPlacement(): List<Word> {
-        val perpendicularWords = mutableListOf<Word>()
-
-        unlockedStonesOnBoard.forEach { unlockedStone ->
-            if (hasVerticalConnection(unlockedStone)) {
-                val verticalWord = createVerticalWordAt(unlockedStone)
-                if (verticalWord.length > 1) {
-                    perpendicularWords.add(verticalWord)
-                }
-            }
-        }
-
-        return perpendicularWords
-    }
-
-    private fun getPerpendicularWordsFromVerticalPlacement(): List<Word> {
-        val perpendicularWords = mutableListOf<Word>()
-
-        unlockedStonesOnBoard.forEach { unlockedStone ->
-            if (hasHorizontalConnection(unlockedStone)) {
-                val horizontalWord = createHorizontalWordAt(unlockedStone)
-                if (horizontalWord.length > 1) {
-                    perpendicularWords.add(horizontalWord)
-                }
-            }
-        }
-
-        return perpendicularWords
-    }
-
-    private fun hasVerticalConnection(stone: StoneOnBoard): Boolean =
-        stonesOnBoard.any { lockedStone ->
-            lockedStone.isLocked &&
-                    lockedStone.columnIndex == stone.columnIndex &&
-                    (lockedStone.isAbove(stone) || lockedStone.isBelow(stone))
-        }
-
-    private fun hasHorizontalConnection(stone: StoneOnBoard): Boolean =
-        stonesOnBoard.any { lockedStone ->
-            lockedStone.isLocked &&
-                    lockedStone.rowIndex == stone.rowIndex &&
-                    (lockedStone.isToLeftOf(stone) || lockedStone.isToRightOf(stone))
-        }
 
     private fun createVerticalWordAt(stone: StoneOnBoard): Word {
         val firstVerticalIndex =
