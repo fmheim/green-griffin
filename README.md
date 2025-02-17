@@ -26,7 +26,7 @@ A modern implementation of the classic Scrabble word game for Android, built wit
 ## Upcoming Features
 
 ### Game Mechanics
-- [ ] Implementation of joker stones
+- [ ] Implementation of joker stones (in progress)
 - [ ] Special board fields (double word points, double letter points)
 - [ ] Stone shuffling in hand
 - [ ] Quick actions for stone management

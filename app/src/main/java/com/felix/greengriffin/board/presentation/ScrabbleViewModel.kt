@@ -554,6 +554,7 @@ val initialStonesInBag: Set<StoneInBag> =
         }
     }.toSet()
 
+val alphabet = letterPropertiesMap.keys.filter { !it.isWhitespace() }
 
 // StoneListExtensions
 

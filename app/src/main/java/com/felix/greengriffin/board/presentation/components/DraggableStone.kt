@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 data class Word(
@@ -154,7 +153,7 @@ fun DraggableStone(
         modifier = modifier
             .then(other = if (width != null) Modifier.size(width) else Modifier)
             .dragAndDropSource {
-                if (data is StoneOnBoard && data.isLocked) return@dragAndDropSource
+                if (data is StoneOnBoard && data.isLocked || data is StoneInBag) return@dragAndDropSource
                 detectTapGestures(
                     onPress = {
                         startTransfer(
