@@ -5,10 +5,10 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.felix.greengriffin.BuildConfig
-import com.felix.greengriffin.board.presentation.ScrabbleState.Alignment.Horizontal
-import com.felix.greengriffin.board.presentation.ScrabbleState.Alignment.Single
-import com.felix.greengriffin.board.presentation.ScrabbleState.Alignment.Unaligned
-import com.felix.greengriffin.board.presentation.ScrabbleState.Alignment.Vertical
+import com.felix.greengriffin.board.presentation.GameState.Alignment.Horizontal
+import com.felix.greengriffin.board.presentation.GameState.Alignment.Single
+import com.felix.greengriffin.board.presentation.GameState.Alignment.Unaligned
+import com.felix.greengriffin.board.presentation.GameState.Alignment.Vertical
 import com.felix.greengriffin.board.presentation.components.StoneData
 import com.felix.greengriffin.board.presentation.components.StoneInBag
 import com.felix.greengriffin.board.presentation.components.StoneInHand
@@ -27,7 +27,7 @@ import java.util.UUID
 
 
 @Immutable
-data class ScrabbleState(
+data class GameState(
     val stonesInHand: List<StoneInHand> = emptyList(),
     val stonesOnBoard: Set<StoneOnBoard> = emptySet(),
     val stonesInBag: Set<StoneInBag> = emptySet(),
@@ -135,7 +135,7 @@ data class ScrabbleState(
                     && isValidWordPlacement
                     && isCurrentWordValid == true
 
-    fun lockInWord(): ScrabbleState {
+    fun lockInWord(): GameState {
         return copy(
             totalPoints = totalPoints + pointsOfCurrentPlacement,
             stonesOnBoard = stonesOnBoard.map { it.copy(isLocked = true) }.toSet()
@@ -312,7 +312,7 @@ data class ScrabbleState(
             .last()
     }
 
-    fun moveStoneToHand(stone: StoneData): ScrabbleState {
+    fun moveStoneToHand(stone: StoneData): GameState {
         val movedStone = when (stone) {
             is StoneInBag -> stone.toStoneInHand(currentUserId)
             is StoneOnBoard -> stone.toStoneInHand(currentUserId)
@@ -329,7 +329,7 @@ data class ScrabbleState(
         stone: StoneData,
         rowIndex: Int,
         columnIndex: Int
-    ): ScrabbleState {
+    ): GameState {
         val movedStone = when (stone) {
             is StoneInHand -> stone.toStoneOnBoard(rowIndex, columnIndex)
             is StoneOnBoard -> stone.copy(rowIndex = rowIndex, columnIndex = columnIndex)
@@ -341,30 +341,30 @@ data class ScrabbleState(
         )
     }
 
-    fun clearEnteredField(): ScrabbleState = copy(enteredField = null)
+    fun clearEnteredField(): GameState = copy(enteredField = null)
 
 }
 
-sealed interface ScrabbleEvent {
+sealed interface GameEvent {
     data class StoneDroppedOnBoard(
         val stoneData: StoneData,
         val columnIndex: Int,
         val rowIndex: Int
-    ) : ScrabbleEvent
+    ) : GameEvent
 
     data class StoneDroppedOnHand(
         val stoneData: StoneData
-    ) : ScrabbleEvent
+    ) : GameEvent
 
-    data class FieldEntered(val index: Int) : ScrabbleEvent
-    data object DrawStonesClick : ScrabbleEvent
-    data object SubmitClick : ScrabbleEvent
+    data class FieldEntered(val index: Int) : GameEvent
+    data object DrawStonesClick : GameEvent
+    data object SubmitClick : GameEvent
 }
 
 
-class ScrabbleViewModel : ViewModel() {
+class WordPlacementViewModel : ViewModel() {
 
-    private val _state = MutableStateFlow(ScrabbleState())
+    private val _state = MutableStateFlow(GameState())
     val state get() = _state.asStateFlow()
 
     init {
@@ -373,13 +373,13 @@ class ScrabbleViewModel : ViewModel() {
         }
     }
 
-    fun onEvent(event: ScrabbleEvent) {
+    fun onEvent(event: GameEvent) {
         when (event) {
-            is ScrabbleEvent.FieldEntered -> _state.update { it.copy(enteredField = event.index) }
-            is ScrabbleEvent.StoneDroppedOnHand -> moveStoneToHand(event.stoneData)
-            ScrabbleEvent.DrawStonesClick -> drawStones()
-            ScrabbleEvent.SubmitClick -> onSubmitClick()
-            is ScrabbleEvent.StoneDroppedOnBoard -> moveStoneToBoard(
+            is GameEvent.FieldEntered -> _state.update { it.copy(enteredField = event.index) }
+            is GameEvent.StoneDroppedOnHand -> moveStoneToHand(event.stoneData)
+            GameEvent.DrawStonesClick -> drawStones()
+            GameEvent.SubmitClick -> onSubmitClick()
+            is GameEvent.StoneDroppedOnBoard -> moveStoneToBoard(
                 stoneData = event.stoneData,
                 rowIndex = event.rowIndex,
                 columnIndex = event.columnIndex

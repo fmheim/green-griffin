@@ -16,16 +16,16 @@ import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
-import com.felix.greengriffin.board.presentation.ScrabbleEvent
-import com.felix.greengriffin.board.presentation.ScrabbleEvent.StoneDroppedOnHand
-import com.felix.greengriffin.board.presentation.ScrabbleState
+import com.felix.greengriffin.board.presentation.GameEvent
+import com.felix.greengriffin.board.presentation.GameEvent.StoneDroppedOnHand
+import com.felix.greengriffin.board.presentation.GameState
 
 
 @Composable
 fun StonesRow(
     modifier: Modifier = Modifier,
-    state: ScrabbleState,
-    onEvent: (ScrabbleEvent) -> Unit,
+    state: GameState,
+    onEvent: (GameEvent) -> Unit,
     horizontalPaddingDp: Float = 16f,
     spacedByDp: Float = 4f
 ) {

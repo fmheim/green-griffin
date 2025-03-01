@@ -75,7 +75,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.felix.greengriffin.R
-import com.felix.greengriffin.board.presentation.ScrabbleEvent.StoneDroppedOnBoard
+import com.felix.greengriffin.board.presentation.GameEvent.StoneDroppedOnBoard
 import com.felix.greengriffin.board.presentation.components.DraggableStone
 import com.felix.greengriffin.board.presentation.components.StoneData
 import com.felix.greengriffin.board.presentation.components.StoneInBag
@@ -134,10 +134,10 @@ fun Modifier.animatedGradientBrush(
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
-fun ScrabbleScreen(
+fun WordPlacementScreen(
     modifier: Modifier = Modifier,
-    state: ScrabbleState,
-    onEvent: (ScrabbleEvent) -> Unit
+    state: GameState,
+    onEvent: (GameEvent) -> Unit
 ) {
     Column(modifier = modifier) {
         Row(
@@ -182,7 +182,7 @@ fun ScrabbleScreen(
                 )
             }
         }
-        ScrabbleBoard(
+        WordBoard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp)
@@ -213,7 +213,7 @@ fun ScrabbleScreen(
             colors = ButtonDefaults.buttonColors().copy(),
             shape = RoundedCornerShape(8.dp),
             border = BorderStroke(width = 2.dp, color = MaterialTheme.colorScheme.outline),
-            onClick = { onEvent(ScrabbleEvent.DrawStonesClick) }) {
+            onClick = { onEvent(GameEvent.DrawStonesClick) }) {
             Text(text = "Steine auffüllen", color = MaterialTheme.colorScheme.onSecondary)
             Icon(
                 painter = painterResource(R.drawable.ic_draw_stones),
@@ -252,7 +252,7 @@ fun ScrabbleScreen(
                             color = MaterialTheme.colorScheme.onSurface,
                             shape = RoundedCornerShape(30.dp)
                         )
-                        .clickable { onEvent(ScrabbleEvent.SubmitClick) }
+                        .clickable { onEvent(GameEvent.SubmitClick) }
                         .padding(16.dp)
                 ) {
 
@@ -293,10 +293,10 @@ fun ScrabbleScreen(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ScrabbleBoard(
+fun WordBoard(
     modifier: Modifier = Modifier,
-    onEvent: (ScrabbleEvent) -> Unit,
-    state: ScrabbleState
+    onEvent: (GameEvent) -> Unit,
+    state: GameState
 ) {
     val numColumns = 15
     LazyVerticalGrid(
@@ -350,7 +350,7 @@ fun ScrabbleBoard(
 
                                 override fun onEntered(event: DragAndDropEvent) {
                                     super.onEntered(event)
-                                    onEvent(ScrabbleEvent.FieldEntered(index = index))
+                                    onEvent(GameEvent.FieldEntered(index = index))
                                 }
                             }
                         }
@@ -376,16 +376,16 @@ fun ScrabbleBoard(
 
 @Preview(showBackground = true, backgroundColor = 0xFF164134)
 @Composable
-fun ScrabbleScreenPreview() {
+fun WordPlacementScreenPreview() {
     GreenGriffinTheme {
-        ScrabbleScreen(state = previewScrabbleState, onEvent = {})
+        WordPlacementScreen(state = previewGameState, onEvent = {})
     }
 }
 
 fun getColumnIndex(gridIndex: Int, totalColumns: Int) = gridIndex % totalColumns
 fun getRowIndex(gridIndex: Int, totalColumns: Int) = gridIndex / totalColumns
 
-val previewScrabbleState = ScrabbleState(
+val previewGameState = GameState(
     isCurrentWordValid = true,
     totalPoints = 42,
     stonesInHand = listOf(

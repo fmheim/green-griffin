@@ -16,8 +16,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.felix.greengriffin.board.presentation.ScrabbleScreen
-import com.felix.greengriffin.board.presentation.ScrabbleViewModel
+import com.felix.greengriffin.board.presentation.WordPlacementScreen
+import com.felix.greengriffin.board.presentation.WordPlacementViewModel
 import com.felix.greengriffin.core.presentation.theme.GreenGriffinTheme
 
 class MainActivity : ComponentActivity() {
@@ -25,7 +25,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
-            val viewModel: ScrabbleViewModel = viewModel()
+            val viewModel: WordPlacementViewModel = viewModel()
             val state by viewModel.state.collectAsState()
 
             GreenGriffinTheme {
@@ -34,7 +34,7 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    ScrabbleScreen(
+                    WordPlacementScreen(
                         modifier = Modifier
                             .windowInsetsPadding(WindowInsets.systemBars)
                             .verticalScroll(state = rememberScrollState()),
