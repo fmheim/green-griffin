@@ -6,7 +6,8 @@ A modern implementation of a classic word building game for Android, built with 
 
 ### Current Features
 - 🎮 Classic word placement gameplay mechanics
-- 🎯 Drag and drop interface for tile placement
+- 🎯 Drag and drop interface for tile placement 
+- 🃏 Joker Selector 
 - ✅ Real-time word validation using Gemini AI
 - 🔤 German language support
 - 🎲 Point calculation based on letter values and board multipliers
@@ -26,7 +27,6 @@ A modern implementation of a classic word building game for Android, built with 
 ## Upcoming Features
 
 ### Game Mechanics
-- [ ] Implementation of blank tiles (in progress)
 - [ ] Premium squares (double word score, double letter score)
 - [ ] Tile shuffling in rack
 - [ ] Quick actions for tile management
