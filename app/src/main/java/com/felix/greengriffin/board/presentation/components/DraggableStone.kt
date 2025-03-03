@@ -6,12 +6,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,13 +22,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -39,7 +33,6 @@ data class Word(
     val letters: List<StoneData>
 ) {
     val points get() = letters.sumOf { it.value }
-    val length get() = letters.size
     val asString get() = letters.map { it.letter }.joinToString("")
 }
 
@@ -174,7 +167,7 @@ fun DraggableStone(
                         })
                 }
                 .background(
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    color = MaterialTheme.colorScheme.primary,
                     shape = RoundedCornerShape(4.dp)
                 )
                 .border(
@@ -187,7 +180,7 @@ fun DraggableStone(
             Text(
                 modifier = Modifier.padding(4.dp),
                 text = " " + data.letter.toString() + " ",
-                color = MaterialTheme.colorScheme.onSecondary,
+                color = MaterialTheme.colorScheme.onPrimary,
                 maxLines = 1,
                 lineHeight = fontSize,
                 onTextLayout = {
