@@ -1,16 +1,16 @@
-# A Modern Scrabble Game for Android
+# A Modern Word Building Game for Android
 
-A modern implementation of the classic Scrabble word game for Android, built with Kotlin and Jetpack Compose. The game currently supports German language play with real-time word validation using AI.
+A modern implementation of a classic word building game for Android, built with Kotlin and Jetpack Compose. The game currently supports German language play with real-time word validation using AI.
 
 ## Features
 
 ### Current Features
-- 🎮 Classic Scrabble gameplay mechanics
-- 🎯 Drag and drop interface for stone placement
+- 🎮 Classic word placement gameplay mechanics
+- 🎯 Drag and drop interface for tile placement
 - ✅ Real-time word validation using Gemini AI
 - 🔤 German language support
-- 🎲 Point calculation based on official Scrabble rules
-- 🔄 Automatic stone refill system
+- 🎲 Point calculation based on letter values and board multipliers
+- 🔄 Automatic tile refill system
 - 🏗️ Built with modern Android architecture
   - Jetpack Compose for UI
   - ViewModel for state management
@@ -26,12 +26,12 @@ A modern implementation of the classic Scrabble word game for Android, built wit
 ## Upcoming Features
 
 ### Game Mechanics
-- [ ] Implementation of joker stones (in progress)
-- [ ] Special board fields (double word points, double letter points)
-- [ ] Stone shuffling in hand
-- [ ] Quick actions for stone management
-  - [ ] Move all unlocked stones from board to hand
-  - [ ] Only show stone refill button after word submission
+- [ ] Implementation of blank tiles (in progress)
+- [ ] Premium squares (double word score, double letter score)
+- [ ] Tile shuffling in rack
+- [ ] Quick actions for tile management
+  - [ ] Move all unlocked tiles from board to rack
+  - [ ] Only show tile refill button after word submission
 
 ### Game Modes
 - [ ] Meta screen implementation
@@ -52,5 +52,5 @@ A modern implementation of the classic Scrabble word game for Android, built wit
 - [ ] Persistent storage for game state
 - [ ] Architecture improvements
 - [ ] Enhanced word validation
-  - [ ] Validate stones when moving back to hand
+  - [ ] Validate tiles when moving back to rack
 - [ ] Performance optimizations
