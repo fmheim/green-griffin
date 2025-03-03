@@ -33,19 +33,21 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.window.DialogProperties
-import com.felix.greengriffin.board.presentation.alphabet
+import com.felix.greengriffin.board.presentation.germanAlphabet
 import com.felix.greengriffin.core.presentation.theme.GreenGriffinTheme
 import java.util.UUID
 import kotlin.math.absoluteValue
 
 @Composable
-fun StoneSelector( // TODO: add alphabet parameter and state + events from a viewmodel
+fun StoneSelector(
     onLetterSelected: (Char) -> Unit,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+    alphabet: List<Char> = germanAlphabet, // todo implement persistent list
 ) {
-    val selectedLetter = remember { mutableStateOf<Char?>(null) }
-
+    val pagerState = rememberPagerState(pageCount = alphabet::size)
     AlertDialog(
+        modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true),
@@ -63,7 +65,6 @@ fun StoneSelector( // TODO: add alphabet parameter and state + events from a vie
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                val pagerState = rememberPagerState(pageCount = alphabet::size)
                 Box {
                     HorizontalPager(
                         modifier = Modifier.fillMaxWidth(0.7f),
@@ -120,10 +121,8 @@ fun StoneSelector( // TODO: add alphabet parameter and state + events from a vie
         confirmButton = {
             Button(
                 onClick = {
-                    selectedLetter.value?.let { onLetterSelected(it) }
-                    onDismissRequest()
-                },
-                enabled = selectedLetter.value != null
+                    onLetterSelected(alphabet[pagerState.currentPage])
+                }
             ) {
                 Text(text = "Confirm")
             }
@@ -155,7 +154,7 @@ private fun Underline() {
         modifier = Modifier
             .padding(top = 12.dp)
             .background(
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.tertiary,
                 shape = CircleShape
             )
             .fillMaxWidth(0.3f)
@@ -165,12 +164,13 @@ private fun Underline() {
 
 @Preview(showBackground = true)
 @Composable
-fun JokerSelectorPreview() = GreenGriffinTheme {
+fun StoneSelectorPreview() = GreenGriffinTheme {
     val showDialog = remember { mutableStateOf(true) }
     if (showDialog.value) {
         StoneSelector(
             onLetterSelected = { showDialog.value = false },
-            onDismissRequest = { showDialog.value = false }
+            onDismissRequest = { showDialog.value = false },
+            alphabet = germanAlphabet
         )
     }
 }

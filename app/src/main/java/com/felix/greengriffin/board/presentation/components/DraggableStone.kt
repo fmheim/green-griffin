@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -30,7 +31,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 data class Word(
-    val letters: List<StoneData>
+    val letters: List<StoneData>,
 ) {
     val points get() = letters.sumOf { it.value }
     val asString get() = letters.map { it.letter }.joinToString("")
@@ -44,6 +45,7 @@ sealed class StoneData {
     abstract val letter: Char
     abstract val value: Int
     abstract val id: String
+    val isJoker get() = letter == ' ' && value == 0
 
     fun asClipData(): ClipData =
         ClipData.newPlainText("${letter}_$value", Json.encodeToString(this))
@@ -87,7 +89,7 @@ data class StoneInHand(
     override val letter: Char,
     override val value: Int,
     override val id: String,
-    val userId: Int
+    val userId: Int,
 ) : StoneData() {
 
     fun toStoneInBag() = StoneInBag(
@@ -175,7 +177,6 @@ fun DraggableStone(
                     color = MaterialTheme.colorScheme.outline,
                     shape = RoundedCornerShape(4.dp)
                 )
-
         ) {
             Text(
                 modifier = Modifier.padding(4.dp),
@@ -188,24 +189,32 @@ fun DraggableStone(
                 },
                 fontSize = fontSize,
             )
-
         }
-        Box(
+        data.value.takeIf { it > 0 }?.let {
+            ValueBadge(it.toString())
+        }
+    }
+}
+
+@Composable
+private fun BoxScope.ValueBadge(value: String) {
+    Box(
+        modifier = Modifier
+            .offset(x = 2.dp, y = 2.dp)
+            .align(Alignment.BottomEnd)
+            .background(color = MaterialTheme.colorScheme.secondary, shape = CircleShape)
+
+    ) {
+        Text(
             modifier = Modifier
-                .offset(x = 2.dp, y = 2.dp)
-                .align(Alignment.BottomEnd)
-                .background(color = MaterialTheme.colorScheme.secondary, shape = CircleShape)
-
-        ) {
-            Text(
-                modifier = Modifier.padding(1.dp).widthIn(10.dp),
-                color = MaterialTheme.colorScheme.onSecondary,
-                maxLines = 1,
-                text = data.value.toString(),
-                textAlign = TextAlign.Center,
-                fontSize = 8.sp,
-                lineHeight = 10.sp
-            )
-        }
+                .padding(1.dp)
+                .widthIn(10.dp),
+            color = MaterialTheme.colorScheme.onSecondary,
+            maxLines = 1,
+            text = value,
+            textAlign = TextAlign.Center,
+            fontSize = 8.sp,
+            lineHeight = 10.sp
+        )
     }
 }

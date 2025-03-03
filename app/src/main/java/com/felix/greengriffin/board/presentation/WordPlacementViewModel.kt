@@ -4,11 +4,11 @@ package com.felix.greengriffin.board.presentation
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.felix.greengriffin.BuildConfig
 import com.felix.greengriffin.board.presentation.GameState.Alignment.Horizontal
 import com.felix.greengriffin.board.presentation.GameState.Alignment.Single
 import com.felix.greengriffin.board.presentation.GameState.Alignment.Unaligned
 import com.felix.greengriffin.board.presentation.GameState.Alignment.Vertical
+import com.felix.greengriffin.board.presentation.GameState.JokerCoordinates
 import com.felix.greengriffin.board.presentation.components.StoneData
 import com.felix.greengriffin.board.presentation.components.StoneInBag
 import com.felix.greengriffin.board.presentation.components.StoneInHand
@@ -37,11 +37,35 @@ data class GameState(
     val enteredField: Int? = null,
     val isPromptLoading: Boolean = false,
     val totalPoints: Long = 0,
-    private val isCurrentWordValid: Boolean? = null
+    val jokerCoordinates: JokerCoordinates? = null,
+    private val isCurrentWordValid: Boolean? = null,
 ) {
     enum class Alignment {
         Horizontal, Vertical, Single, Unaligned
     }
+
+    data class JokerCoordinates(val row: Int, val column: Int)
+
+    val isJokerSelectorVisible get() = jokerCoordinates != null
+
+    val firstEmptyCoordinates: JokerCoordinates
+        get() {
+            val lastColumn =
+                stonesOnBoard.maxOfOrNull { it.columnIndex } ?: return JokerCoordinates(0, 0)
+            val lastRow = stonesOnBoard.maxOfOrNull { it.rowIndex } ?: return JokerCoordinates(0, 0)
+            val occupied = stonesOnBoard
+                .map { it.columnIndex to it.rowIndex }
+                .toSet()
+
+            for (col in 0..lastColumn) {
+                for (row in 0..lastRow) {
+                    if (Pair(col, row) !in occupied) {
+                        return JokerCoordinates(row, col)
+                    }
+                }
+            }
+            return JokerCoordinates(0, 0)
+        }
 
     val currentUserStonesInHand get() = stonesInHand.filter { it.userId == currentUserId }
     private val unlockedStonesOnBoard get() = stonesOnBoard.filterNot(StoneOnBoard::isLocked)
@@ -330,15 +354,23 @@ data class GameState(
     fun moveStoneToBoard(
         stone: StoneData,
         rowIndex: Int,
-        columnIndex: Int
+        columnIndex: Int,
     ): GameState {
         val movedStone = when (stone) {
             is StoneInHand -> stone.toStoneOnBoard(rowIndex, columnIndex)
             is StoneOnBoard -> stone.copy(rowIndex = rowIndex, columnIndex = columnIndex)
             is StoneInBag -> return this // todo maybe set error? Invalid operation for stones in the bag
         }
+        val updatedStonesInHand = when {
+            stone !is StoneInHand -> stonesInHand
+            stone in stonesInHand -> stonesInHand - stone
+            stone.value == 0 ->
+                stonesInHand.find { it.isJoker }?.let { stonesInHand.minus(it)} ?: stonesInHand
+
+            else -> stonesInHand.minus(stone)
+        }
         return copy(
-            stonesInHand = if (stone is StoneInHand) stonesInHand - stone else stonesInHand,
+            stonesInHand = updatedStonesInHand,
             stonesOnBoard = if (stone is StoneOnBoard) stonesOnBoard + movedStone - stone else stonesOnBoard + movedStone
         )
     }
@@ -351,26 +383,29 @@ sealed interface GameEvent {
     data class StoneDroppedOnBoard(
         val stoneData: StoneData,
         val columnIndex: Int,
-        val rowIndex: Int
+        val rowIndex: Int,
     ) : GameEvent
 
     data class StoneDroppedOnHand(
-        val stoneData: StoneData
+        val stoneData: StoneData,
     ) : GameEvent
 
     data class FieldEntered(val index: Int) : GameEvent
     data object DrawStonesClick : GameEvent
     data object SubmitClick : GameEvent
+    data class JokerSelected(val letter: Char) : GameEvent
+    data object JokerSelectorDismissRequested : GameEvent
 }
 
 
 @HiltViewModel
 class WordPlacementViewModel @Inject constructor(
-    private val generativeModel: GenerativeModel // todo move to repo
+    private val generativeModel: GenerativeModel, // todo move to repo
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(GameState())
     val state get() = _state.asStateFlow()
+
 
     init {
         _state.update {
@@ -389,7 +424,30 @@ class WordPlacementViewModel @Inject constructor(
                 rowIndex = event.rowIndex,
                 columnIndex = event.columnIndex
             )
+
+            is GameEvent.JokerSelected -> onJokerSelected(letter = event.letter)
+            GameEvent.JokerSelectorDismissRequested -> dimissJokerSelector()
         }
+    }
+
+    private fun onJokerSelected(letter: Char) {
+        moveStoneToBoard(
+            stoneData = StoneInHand(
+                letter = letter,
+                value = 0,
+                id = UUID.randomUUID().toString(),
+                userId = 1
+            ),
+            rowIndex = _state.value.jokerCoordinates?.row
+                ?: _state.value.firstEmptyCoordinates.row,
+            columnIndex = _state.value.jokerCoordinates?.column
+                ?: _state.value.firstEmptyCoordinates.column
+        )
+        dimissJokerSelector()
+    }
+
+    private fun dimissJokerSelector() {
+        _state.update { it.copy(jokerCoordinates = null) }
     }
 
     private fun drawStones() =
@@ -407,9 +465,21 @@ class WordPlacementViewModel @Inject constructor(
     private fun moveStoneToBoard(
         stoneData: StoneData,
         rowIndex: Int,
-        columnIndex: Int
+        columnIndex: Int,
     ) {
         println("StoneDroppedOnBoard")
+
+        if (stoneData.isJoker) {
+            _state.update {
+                it.copy(
+                    jokerCoordinates = JokerCoordinates(
+                        row = rowIndex,
+                        column = columnIndex
+                    )
+                )
+            }
+            return
+        }
 
         _state.update { currentState ->
             currentState
@@ -472,7 +542,7 @@ class WordPlacementViewModel @Inject constructor(
     }
 
     private fun sendPrompt(
-        prompt: String
+        prompt: String,
     ) {
         _state.update { it.copy(isPromptLoading = true, isCurrentWordValid = null) }
 
@@ -508,7 +578,7 @@ class WordPlacementViewModel @Inject constructor(
 
 data class LetterProperties(
     val value: Int,
-    val frequency: Int
+    val frequency: Int,
 )
 
 val letterPropertiesMap = mapOf(
@@ -555,7 +625,7 @@ val initialStonesInBag: Set<StoneInBag> =
         }
     }.toSet()
 
-val alphabet = letterPropertiesMap.keys.filter { !it.isWhitespace() }
+val germanAlphabet = letterPropertiesMap.keys.filter { !it.isWhitespace() }
 
 // StoneListExtensions
 

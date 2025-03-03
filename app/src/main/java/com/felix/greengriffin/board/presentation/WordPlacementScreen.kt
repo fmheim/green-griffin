@@ -68,6 +68,7 @@ import com.felix.greengriffin.board.presentation.components.StoneData
 import com.felix.greengriffin.board.presentation.components.StoneInBag
 import com.felix.greengriffin.board.presentation.components.StoneInHand
 import com.felix.greengriffin.board.presentation.components.StoneOnBoard
+import com.felix.greengriffin.board.presentation.components.StoneSelector
 import com.felix.greengriffin.board.presentation.components.StonesRow
 import com.felix.greengriffin.core.presentation.theme.GreenGriffinTheme
 import com.felix.greengriffin.util.extensions.compose.animatedGradientBrush
@@ -78,8 +79,14 @@ import com.felix.greengriffin.util.extensions.compose.animatedGradientBrush
 fun WordPlacementScreen(
     modifier: Modifier = Modifier,
     state: GameState,
-    onEvent: (GameEvent) -> Unit
+    onEvent: (GameEvent) -> Unit,
 ) {
+    AnimatedVisibility(state.isJokerSelectorVisible) {
+        StoneSelector(
+            onLetterSelected = { onEvent(GameEvent.JokerSelected(it)) },
+            onDismissRequest = { onEvent(GameEvent.JokerSelectorDismissRequested) }
+        )
+    }
     Column(modifier = modifier) {
         Row(
             modifier = Modifier
@@ -236,7 +243,7 @@ fun WordPlacementScreen(
 fun WordBoard(
     modifier: Modifier = Modifier,
     onEvent: (GameEvent) -> Unit,
-    state: GameState
+    state: GameState,
 ) {
     val numColumns = 15
     LazyVerticalGrid(
