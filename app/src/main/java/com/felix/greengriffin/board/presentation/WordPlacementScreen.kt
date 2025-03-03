@@ -87,53 +87,7 @@ import com.felix.greengriffin.board.presentation.components.StoneInHand
 import com.felix.greengriffin.board.presentation.components.StoneOnBoard
 import com.felix.greengriffin.board.presentation.components.StonesRow
 import com.felix.greengriffin.core.presentation.theme.GreenGriffinTheme
-
-
-@Stable
-@Composable
-fun Modifier.animatedGradientBrush(
-): Modifier {
-
-    val infiniteTransition = rememberInfiniteTransition(label = "infiniteTransition")
-
-    val targetOffset = with(LocalDensity.current) {
-        100.dp.toPx()
-    }
-
-    val offset by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = targetOffset,
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = 350000,
-                easing = LinearEasing,
-            ), repeatMode = RepeatMode.Reverse
-        ), label = "offset"
-    )
-    val colors = listOf(
-        MaterialTheme.colorScheme.onSurface,
-        MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
-    )
-    return this.then(
-        Modifier
-            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-            .drawWithCache {
-                val gradientBrush = Brush.linearGradient(
-                    colors = colors,
-                    start = Offset(offset * size.width, offset * size.width),
-                    end = Offset(
-                        offset * size.width + size.width,
-                        offset * size.width + size.width
-                    ),
-                    tileMode = TileMode.Mirror
-                )
-                onDrawWithContent {
-                    drawContent()
-                    drawRect(gradientBrush, blendMode = BlendMode.SrcAtop)
-                }
-            }
-    )
-}
+import com.felix.greengriffin.util.extensions.compose.animatedGradientBrush
 
 
 @OptIn(ExperimentalAnimationApi::class)
@@ -292,7 +246,6 @@ fun WordPlacementScreen(
             }
         }
     }
-
 }
 
 @OptIn(ExperimentalFoundationApi::class)

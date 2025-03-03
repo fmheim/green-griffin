@@ -3,6 +3,7 @@ package com.felix.greengriffin.board.presentation.components
 import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -80,15 +81,11 @@ fun StoneSelector( // TODO: add alphabet parameter and state + events from a vie
                                 DraggableStone(
                                     modifier = Modifier
                                         .graphicsLayer {
-                                            // Calculate the absolute offset for the current page from the
-                                            // scroll position. We use the absolute value which allows us to mirror
-                                            // any effects for both directions
                                             val pageOffset = (
-                                                    (pagerState.currentPage - page) + pagerState
-                                                        .currentPageOffsetFraction
+                                                    (pagerState.currentPage - page)
+                                                            + pagerState.currentPageOffsetFraction
                                                     ).absoluteValue
 
-                                            // We animate the alpha, between 50% and 100%
                                             alpha = lerp(
                                                 start = 0.8f,
                                                 stop = 1f,
@@ -104,8 +101,7 @@ fun StoneSelector( // TODO: add alphabet parameter and state + events from a vie
                                                 stop = 1f,
                                                 fraction = 1f - pageOffset.coerceIn(0f, 1f)
                                             )
-                                        }
-                                    ,
+                                        },
                                     data = StoneInBag(
                                         letter = alphabet[page],
                                         value = 0,
@@ -115,32 +111,10 @@ fun StoneSelector( // TODO: add alphabet parameter and state + events from a vie
                             }
                         }
                     )
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .background(
-                                brush = Brush.horizontalGradient(
-                                    colors = listOf(
-                                        MaterialTheme.colorScheme.background,
-                                        Transparent,
-                                        Transparent,
-                                        MaterialTheme.colorScheme.background
-                                    )
-                                )
-                            )
-                    )
+                    GradientOverlay()
                 }
 
-                Box(
-                    modifier = Modifier
-                        .padding(top = 12.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.onSurface,
-                            shape = CircleShape
-                        )
-                        .fillMaxWidth(0.3f)
-                        .height(8.dp)
-                )
+                Underline()
             }
         },
         confirmButton = {
@@ -154,6 +128,38 @@ fun StoneSelector( // TODO: add alphabet parameter and state + events from a vie
                 Text(text = "Confirm")
             }
         },
+    )
+}
+
+@Composable
+private fun BoxScope.GradientOverlay() {
+    Box(
+        modifier = Modifier
+            .matchParentSize()
+            .background(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.background,
+                        Transparent,
+                        Transparent,
+                        MaterialTheme.colorScheme.background
+                    )
+                )
+            )
+    )
+}
+
+@Composable
+private fun Underline() {
+    Box(
+        modifier = Modifier
+            .padding(top = 12.dp)
+            .background(
+                color = MaterialTheme.colorScheme.primary,
+                shape = CircleShape
+            )
+            .fillMaxWidth(0.3f)
+            .height(8.dp)
     )
 }
 
