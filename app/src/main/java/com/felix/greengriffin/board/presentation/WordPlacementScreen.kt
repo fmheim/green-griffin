@@ -32,9 +32,11 @@ import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -60,6 +62,7 @@ import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
@@ -74,6 +77,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.felix.greengriffin.R
 import com.felix.greengriffin.board.presentation.GameEvent.StoneDroppedOnBoard
 import com.felix.greengriffin.board.presentation.components.DraggableStone
@@ -108,7 +112,7 @@ fun Modifier.animatedGradientBrush(
     )
     val colors = listOf(
         MaterialTheme.colorScheme.onSurface,
-        MaterialTheme.colorScheme.surface,
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
     )
     return this.then(
         Modifier
@@ -189,12 +193,12 @@ fun WordPlacementScreen(
                 .padding(bottom = 16.dp)
                 .border(
                     width = when {
-                        state.isAbleToSubmit -> 3.dp
+                        state.isAbleToSubmit -> 5.dp
                         else -> 2.dp
                     },
                     color = when {
-                        state.isAbleToSubmit -> MaterialTheme.colorScheme.onSurfaceVariant
-                        else -> MaterialTheme.colorScheme.onSurface
+                        state.isAbleToSubmit -> MaterialTheme.colorScheme.outline // todo maybe animate border when able to send in
+                        else -> MaterialTheme.colorScheme.outline
                     }
                 ),
             state = state,
@@ -308,9 +312,9 @@ fun WordBoard(
         items(numColumns * numColumns) { index ->
             Box(
                 modifier = Modifier
+                    .zIndex(numColumns * numColumns - index.toFloat())
                     .aspectRatio(1f)
-                    .background(color = if (state.enteredField == index) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface)
-                    .border(width = 1.dp, color = MaterialTheme.colorScheme.onSurface)
+                    .background(color = if (state.enteredField == index) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.secondaryContainer)
                     .dragAndDropTarget(
                         shouldStartDragAndDrop = {
                             state.isPositionOnBoardAvailable(
@@ -356,6 +360,11 @@ fun WordBoard(
                         }
                     ),
                 content = {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .border(width = 1.dp, color = MaterialTheme.colorScheme.outline)
+                    )
                     state.stonesOnBoard.find { stone ->
                         stone.columnIndex == getColumnIndex(
                             gridIndex = index,
@@ -365,7 +374,10 @@ fun WordBoard(
                             totalColumns = numColumns
                         )
                     }?.let {
-                        DraggableStone(data = it)
+                        DraggableStone(
+                            modifier = Modifier.fillMaxSize(),
+                            data = it
+                        )
                     }
                 }
             )

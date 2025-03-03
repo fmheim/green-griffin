@@ -6,8 +6,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -20,9 +26,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -149,52 +158,60 @@ fun DraggableStone(
     var fontSize by remember {
         mutableStateOf(45.sp)
     }
-    Box(
-        modifier = modifier
-            .then(other = if (width != null) Modifier.size(width) else Modifier)
-            .dragAndDropSource {
-                if (data is StoneOnBoard && data.isLocked || data is StoneInBag) return@dragAndDropSource
-                detectTapGestures(
-                    onPress = {
-                        startTransfer(
-                            transferData = DragAndDropTransferData(
-                                clipData = data.asClipData()
-                            )
-                        )
-                    })
-            }
-            .background(
-                color = MaterialTheme.colorScheme.secondary,
-                shape = RoundedCornerShape(4.dp)
-            )
-            .border(
-                width = 2.dp,
-                color = MaterialTheme.colorScheme.outline,
-                shape = RoundedCornerShape(4.dp)
-            )
-    ) {
-        Text(
-            modifier = Modifier.padding(4.dp),
-            text = " " + data.letter.toString() + " ",
-            color = MaterialTheme.colorScheme.onSecondary,
-            maxLines = 1,
-            lineHeight = fontSize,
-            onTextLayout = {
-                if (it.hasVisualOverflow) fontSize *= 0.8f
-            },
-            fontSize = fontSize,
-        )
+    Box {
         Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .clip(shape = RoundedCornerShape(4.dp))
-                .background(color = MaterialTheme.colorScheme.outline)
+            modifier = modifier
+                .then(other = if (width != null) Modifier.size(width) else Modifier)
+                .dragAndDropSource {
+                    if (data is StoneOnBoard && data.isLocked || data is StoneInBag) return@dragAndDropSource
+                    detectTapGestures(
+                        onPress = {
+                            startTransfer(
+                                transferData = DragAndDropTransferData(
+                                    clipData = data.asClipData()
+                                )
+                            )
+                        })
+                }
+                .background(
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    shape = RoundedCornerShape(4.dp)
+                )
+                .border(
+                    width = 2.dp,
+                    color = MaterialTheme.colorScheme.outline,
+                    shape = RoundedCornerShape(4.dp)
+                )
+
         ) {
             Text(
-                modifier = Modifier.padding(1.dp),
+                modifier = Modifier.padding(4.dp),
+                text = " " + data.letter.toString() + " ",
                 color = MaterialTheme.colorScheme.onSecondary,
                 maxLines = 1,
-                text = data.value.toString(), fontSize = 10.sp, lineHeight = 10.sp
+                lineHeight = fontSize,
+                onTextLayout = {
+                    if (it.hasVisualOverflow) fontSize *= 0.8f
+                },
+                fontSize = fontSize,
+            )
+
+        }
+        Box(
+            modifier = Modifier
+                .offset(x = 2.dp, y = 2.dp)
+                .align(Alignment.BottomEnd)
+                .background(color = MaterialTheme.colorScheme.secondary, shape = CircleShape)
+
+        ) {
+            Text(
+                modifier = Modifier.padding(1.dp).widthIn(10.dp),
+                color = MaterialTheme.colorScheme.onSecondary,
+                maxLines = 1,
+                text = data.value.toString(),
+                textAlign = TextAlign.Center,
+                fontSize = 8.sp,
+                lineHeight = 10.sp
             )
         }
     }
