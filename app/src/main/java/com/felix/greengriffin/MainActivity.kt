@@ -15,18 +15,21 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.felix.greengriffin.board.presentation.WordPlacementScreen
 import com.felix.greengriffin.board.presentation.WordPlacementViewModel
 import com.felix.greengriffin.core.presentation.theme.GreenGriffinTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
-            val viewModel: WordPlacementViewModel = viewModel()
-            val state by viewModel.state.collectAsState()
+            val viewModel: WordPlacementViewModel = hiltViewModel()
+            val state by viewModel.state.collectAsStateWithLifecycle()
 
             GreenGriffinTheme {
                 Surface(

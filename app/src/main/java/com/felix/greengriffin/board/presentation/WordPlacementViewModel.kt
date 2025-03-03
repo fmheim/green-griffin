@@ -18,12 +18,14 @@ import com.felix.greengriffin.board.presentation.components.asWord
 import com.felix.greengriffin.util.extensions.list.isEmptyOrOnlyNulls
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.content
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
+import javax.inject.Inject
 
 
 @Immutable
@@ -362,7 +364,10 @@ sealed interface GameEvent {
 }
 
 
-class WordPlacementViewModel : ViewModel() {
+@HiltViewModel
+class WordPlacementViewModel @Inject constructor(
+    private val generativeModel: GenerativeModel // todo move to repo
+) : ViewModel() {
 
     private val _state = MutableStateFlow(GameState())
     val state get() = _state.asStateFlow()
@@ -453,10 +458,6 @@ class WordPlacementViewModel : ViewModel() {
         }
     }
 
-
-    private val generativeModel = GenerativeModel(
-        modelName = "gemini-1.5-flash", apiKey = BuildConfig.apiKey
-    )
 
     private fun onSubmitClick() {
         println("SubmitClick")

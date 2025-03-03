@@ -101,5 +101,68 @@ If needed, you can further use the `web_scraper.py` file to scrape the web page 
 - Add debug information to stderr while keeping the main output clean in stdout for better pipeline integration
 - When using seaborn styles in matplotlib, use 'seaborn-v0_8' instead of 'seaborn' as the style name due to recent seaborn version changes
 - Use 'gpt-4o' as the model name for OpenAI's GPT-4 with vision capabilities
+- Latest Hilt version is 2.50 with KSP 2.0.21-1.0.27 for optimal Android dependency injection setup
 
 # Scratchpad
+
+## Current Task: Set up Hilt Dependency Injection
+
+### Latest Versions
+- Hilt: 2.50 (latest stable)
+- KSP: 2.0.21-1.0.27 (latest stable for Kotlin 2.0.0)
+- Android Gradle Plugin: 8.3.0 (latest stable)
+
+### Plan
+1. [X] Add required dependencies
+   - [X] Add Hilt plugin to project-level build.gradle
+   - [X] Add Hilt dependencies and KSP plugin to app-level build.gradle
+   - [X] Configure KSP instead of KAPT for better build performance
+
+2. [X] Create Application class
+   - [X] Create custom Application class
+   - [X] Add @HiltAndroidApp annotation
+   - [X] Update AndroidManifest.xml
+
+3. [X] Basic Hilt setup verification
+   - [X] Create a simple ViewModel with Hilt
+   - [X] Test injection in a basic Activity
+   - [X] Add dependency module for GenerativeModel
+
+### Implementation Steps
+1. Project-level build.gradle modifications:
+```groovy
+plugins {
+    id 'com.google.dagger.hilt.android' version '2.50' apply false
+}
+```
+
+2. App-level build.gradle modifications:
+```groovy
+plugins {
+    id 'com.google.dagger.hilt.android'
+    id 'com.google.devtools.ksp'
+}
+
+dependencies {
+    implementation "com.google.dagger:hilt-android:2.50"
+    ksp "com.google.dagger:hilt-compiler:2.50"
+    
+    // For Hilt ViewModel support
+    implementation "androidx.hilt:hilt-navigation-compose:1.2.0"
+}
+```
+
+### Progress Tracking
+✅ Completed:
+- Added all required dependencies
+- Created Application class with Hilt
+- Updated AndroidManifest.xml
+- Added Hilt to MainActivity
+- Updated ViewModel with Hilt injection
+- Created AppModule for GenerativeModel dependency
+
+### Notes
+- Using KSP instead of KAPT for better build performance
+- Hilt 2.50 is the latest stable version
+- androidx.hilt:hilt-navigation-compose:1.2.0 for Compose ViewModel support
+- GenerativeModel is now provided through Hilt's dependency injection
