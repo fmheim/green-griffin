@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -150,14 +151,14 @@ fun DraggableStone(
     modifier: Modifier = Modifier,
     width: Dp? = null,
 ) {
-    var fontSize by remember {
-        mutableStateOf(45.sp)
-    }
+    var scaledFontSize by remember { mutableStateOf(45.sp) }
+    var isTextReady by remember { mutableStateOf(false) }
+
     Box {
         Box(
             modifier = modifier
                 .then(other = if (width != null) Modifier.size(width) else Modifier)
-                .dragAndDropSource {
+                .dragAndDropSource(block = {
                     if (data is StoneOnBoard && data.isLocked || data is StoneInBag) return@dragAndDropSource
                     detectTapGestures(
                         onPress = {
@@ -167,7 +168,7 @@ fun DraggableStone(
                                 )
                             )
                         })
-                }
+                })
                 .background(
                     color = MaterialTheme.colorScheme.primary,
                     shape = RoundedCornerShape(4.dp)
@@ -179,15 +180,25 @@ fun DraggableStone(
                 )
         ) {
             Text(
-                modifier = Modifier.padding(4.dp),
+                modifier = Modifier
+                    .padding(4.dp)
+                    .drawWithContent {
+                        if (isTextReady) {
+                            drawContent()
+                        }
+                    },
                 text = " " + data.letter.toString() + " ",
                 color = MaterialTheme.colorScheme.onPrimary,
                 maxLines = 1,
-                lineHeight = fontSize,
+                lineHeight = scaledFontSize,
                 onTextLayout = {
-                    if (it.hasVisualOverflow) fontSize *= 0.8f
+                    if (it.hasVisualOverflow) {
+                        scaledFontSize *= 0.9f
+                    } else {
+                        isTextReady = true
+                    }
                 },
-                fontSize = fontSize,
+                fontSize = scaledFontSize,
             )
         }
         data.value.takeIf { it > 0 }?.let {
