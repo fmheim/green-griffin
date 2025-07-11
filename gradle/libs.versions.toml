@@ -1,21 +1,22 @@
 [versions]
-agp = "8.9.0"
-kotlin = "2.1.0"
-coreKtx = "1.15.0"
+agp = "8.11.1"
+kotlin = "2.2.0"
+coreKtx = "1.16.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
-lifecycleRuntimeKtx = "2.8.7"
-lifecycleViewmodelCompose = "2.8.7"
+lifecycleRuntimeKtx = "2.9.1"
+lifecycleViewmodelCompose = "2.9.1"
 activityCompose = "1.10.1"
-composeBom = "2025.02.00"
+composeBom = "2025.06.01"
 generativeai = "0.9.0"
 googleAndroidLibrariesMapsplatformSecretsGradlePlugin = "2.0.1"
 kotlinxSerialization = "1.8.0"
-googlefonts = "1.7.8"
-hilt = "2.55"
-ksp = "2.1.0-1.0.29"
+googlefonts = "1.8.3"
+hilt = "2.56.2"
+ksp = "2.2.0-2.0.2"
 hiltNavigationCompose = "1.2.0"
+retrofit = "3.0.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -39,6 +40,10 @@ androidx-ui-text-google-fonts = { group = "androidx.compose.ui", name = "ui-text
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
+retrofit-kotlinx-serialization-converter = { group = "com.jakewharton.retrofit", name = "retrofit2-kotlinx-serialization-converter", version = "0.8.0" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version = "4.12.0" }
+
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
