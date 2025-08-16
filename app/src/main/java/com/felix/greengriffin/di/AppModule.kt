@@ -16,8 +16,9 @@ object AppModule {
     @Singleton
     fun provideGenerativeModel(): GenerativeModel { // todo inject to some kind of repository
         return GenerativeModel(
-            modelName = "gemini-1.5-flash",
+            modelName = "gemini-2.5-flash",
             apiKey = BuildConfig.apiKey
         )
     }
+
 } 

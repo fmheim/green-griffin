@@ -16,8 +16,7 @@ import com.felix.greengriffin.board.presentation.components.StoneOnBoard
 import com.felix.greengriffin.board.presentation.components.Word
 import com.felix.greengriffin.board.presentation.components.asWord
 import com.felix.greengriffin.util.extensions.list.isEmptyOrOnlyNulls
-import com.google.ai.client.generativeai.GenerativeModel
-import com.google.ai.client.generativeai.type.content
+import com.felix.greengriffin.validation.WordValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -168,7 +167,7 @@ data class GameState(
         )
     }
 
-    val newlyCreatedWords: List<Word>
+    private val newlyCreatedWords: List<Word>
         get() {
             if (sortedUnlockedStonesOnBoard.isEmpty()) return emptyList()
 
@@ -400,7 +399,7 @@ sealed interface GameEvent {
 
 @HiltViewModel
 class WordPlacementViewModel @Inject constructor(
-    private val generativeModel: GenerativeModel, // todo move to repo
+    private val wordValidator: WordValidator,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(GameState())
@@ -426,7 +425,7 @@ class WordPlacementViewModel @Inject constructor(
             )
 
             is GameEvent.JokerSelected -> onJokerSelected(letter = event.letter)
-            GameEvent.JokerSelectorDismissRequested -> dimissJokerSelector()
+            GameEvent.JokerSelectorDismissRequested -> dismissJokerSelector()
         }
     }
 
@@ -443,10 +442,10 @@ class WordPlacementViewModel @Inject constructor(
             columnIndex = _state.value.jokerCoordinates?.column
                 ?: _state.value.firstEmptyCoordinates.column
         )
-        dimissJokerSelector()
+        dismissJokerSelector()
     }
 
-    private fun dimissJokerSelector() {
+    private fun dismissJokerSelector() {
         _state.update { it.copy(jokerCoordinates = null) }
     }
 
@@ -498,24 +497,7 @@ class WordPlacementViewModel @Inject constructor(
         if (isValid) {
             val words =
                 _state.value.newlyCreatedWordsAsStrings // Todo: Also get vertical words (unlocked)
-            sendPrompt(
-                "Decide if all the given words are valid according to german scrabble rules: $words\n" +
-                        "\n" +
-                        "All words that are listed as keyword entries in the underlying dictionary are permitted." +
-                        "in the dictionary used. This also includes colloquial expressions, foreign words," +
-                        "technical terms etc. The German grammatical forms of these words are also permitted." +
-                        "inflected forms of these words." +
-                        "Abbreviations, names, prefixes and suffixes are not permitted. Also inadmissible are" +
-                        "words that are not included in the dictionary used as a basis, that are written with a hyphen" +
-                        "or which contain an ellipsis." +
-                        "\n" +
-                        "Return only:\n" +
-                        "true\n" +
-                        "or\n" +
-                        "false\n" +
-                        "\n" +
-                        "No other text or explanation."
-            )
+            validateWords(words)
         }
     }
 
@@ -541,37 +523,12 @@ class WordPlacementViewModel @Inject constructor(
         _state.update { it.lockInWord() }
     }
 
-    private fun sendPrompt(
-        prompt: String,
-    ) {
+    private fun validateWords(words: List<String>) {
         _state.update { it.copy(isPromptLoading = true, isCurrentWordValid = null) }
 
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val response = generativeModel.generateContent(content {
-                    text(prompt)
-                })
-                println("input: $prompt")
-                response.text?.let { outputContent ->
-                    println("output: $outputContent")
-                }
-                val isValid = response.text?.trim()?.lowercase()?.contains("true") == true
-                viewModelScope.launch(Dispatchers.Main) {
-                    _state.update {
-                        if (isValid) {
-                            it.copy(isPromptLoading = false, isCurrentWordValid = true)
-                        } else {
-                            it.copy(isPromptLoading = false, isCurrentWordValid = false)
-                        }
-                    }
-                }
-
-            } catch (e: Exception) {
-                println("send prompt failed: $e")
-                viewModelScope.launch(Dispatchers.Main) {
-                    _state.update { it.copy(isPromptLoading = false, isCurrentWordValid = null) }
-                }
-            }
+            val allWordsValid = words.all { wordValidator.isValid(it) }
+            _state.update { it.copy(isPromptLoading = false, isCurrentWordValid = allWordsValid) }
         }
     }
 }
