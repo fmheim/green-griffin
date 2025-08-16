@@ -7,6 +7,14 @@ import retrofit2.http.Query
 import javax.inject.Inject
 import javax.inject.Singleton
 
+data class ValidWord(
+    val word: String,
+    val language: String
+)
+
+interface WordLookUp{
+    suspend fun getValidWords(wordToCheck: String): List<ValidWord>
+}
 
 interface OpenThesaurusApiService {
     @GET("synonyme/search?format=application/json")

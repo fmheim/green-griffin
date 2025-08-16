@@ -16,6 +16,7 @@ import com.felix.greengriffin.board.presentation.components.StoneOnBoard
 import com.felix.greengriffin.board.presentation.components.Word
 import com.felix.greengriffin.board.presentation.components.asWord
 import com.felix.greengriffin.util.extensions.list.isEmptyOrOnlyNulls
+import com.felix.greengriffin.validation.WordLookUp
 import com.felix.greengriffin.validation.WordValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -399,7 +400,7 @@ sealed interface GameEvent {
 
 @HiltViewModel
 class WordPlacementViewModel @Inject constructor(
-    private val wordValidator: WordValidator,
+    private val wordLookUp: WordLookUp,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(GameState())
@@ -527,7 +528,9 @@ class WordPlacementViewModel @Inject constructor(
         _state.update { it.copy(isPromptLoading = true, isCurrentWordValid = null) }
 
         viewModelScope.launch(Dispatchers.IO) {
-            val allWordsValid = words.all { wordValidator.isValid(it) }
+            val allWordsValid = words.all { wordLookUp.getValidWords(it).also { validWords ->
+                println("Valid words: $validWords")
+            }.isNotEmpty() } // todo: Do something with language of valid word in ui?
             _state.update { it.copy(isPromptLoading = false, isCurrentWordValid = allWordsValid) }
         }
     }
@@ -583,6 +586,7 @@ val initialStonesInBag: Set<StoneInBag> =
     }.toSet()
 
 val germanAlphabet = letterPropertiesMap.keys.filter { !it.isWhitespace() }
+// todo: combine with swedish alphabet?
 
 // StoneListExtensions
 
