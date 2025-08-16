@@ -5,6 +5,12 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
+
+// todo: lizenz in app anzeigen (Libre office...) :
+// Swedish dictionary (sv_SE.dic)
+//Copyright © 2002-2025 The Hunspell Contributors
+//Licensed under the GNU GPL/LGPL/MPL (triple license).
+//Source: https://github.com/LibreOffice/dictionaries/tree/master/sv_SE
 @Entity(
     tableName = "dictionary",
     indices = [
