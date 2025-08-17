@@ -528,7 +528,7 @@ class WordPlacementViewModel @Inject constructor(
 
         viewModelScope.launch(Dispatchers.IO) {
             val allWordsValid = words.all { wordLookUp.getValidWords(it).also { validWords ->
-                println("Valid words: $validWords")
+                println("word to check: $it, Valid words: $validWords")
             }.isNotEmpty() } // todo: Do something with language of valid word in ui?
             _state.update { it.copy(isPromptLoading = false, isCurrentWordValid = allWordsValid) }
         }

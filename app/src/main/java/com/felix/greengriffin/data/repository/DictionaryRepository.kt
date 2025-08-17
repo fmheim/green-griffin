@@ -8,18 +8,20 @@ import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 class DictionaryRepository @Inject constructor(
-    private val dictionaryDao: DictionaryDao
-): WordLookUp {
+    private val dictionaryDao: DictionaryDao,
+) : WordLookUp {
     fun getRandomWord(
         language: String,
         length: Int,
-        firstLetter: String
+        firstLetter: String,
     ): Flow<DictionaryWord?> {
         return dictionaryDao.getRandomWord(language, length, firstLetter)
     }
 
     override suspend fun getValidWords(wordToCheck: String): List<ValidWord> {
-        return dictionaryDao.getWord(word = wordToCheck).map { // todo maybe move mapper to own function
+        return dictionaryDao.getWord(
+            wordInLowercase = wordToCheck.lowercase()
+        ).map { // todo maybe move mapper to own function
             ValidWord(
                 word = it.word,
                 language = it.language
