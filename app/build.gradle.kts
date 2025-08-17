@@ -34,8 +34,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlin {
@@ -55,7 +55,7 @@ android {
                     "-opt-in=kotlin.contracts.ExperimentalContracts"
                 )
             )
-            jvmTarget = JvmTarget.fromTarget("1.8")
+            jvmTarget = JvmTarget.fromTarget("17")
         }
     }
     buildFeatures {
@@ -96,9 +96,4 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-}
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
-    }
 }
