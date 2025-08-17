@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -35,26 +37,25 @@ android {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
-    kotlinOptions {
-        jvmTarget = "1.8"
-        freeCompilerArgs += listOf(
-            "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
-            "-opt-in=androidx.compose.foundation.layout.ExperimentalLayoutApi",
-            "-opt-in=androidx.compose.material.ExperimentalMaterialApi",
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
-            "-opt-in=androidx.compose.ui.ExperimentalComposeUiApi",
-            "-opt-in=androidx.compose.ui.test.ExperimentalTestApi",
-            "-opt-in=com.google.accompanist.permissions.ExperimentalPermissionsApi",
-            "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
-            "-opt-in=kotlinx.coroutines.FlowPreview",
-            "-opt-in=kotlin.contracts.ExperimentalContracts"
-        )
-
-    }
 
     kotlin {
         compilerOptions {
-            freeCompilerArgs.add("-Xwhen-guards")
+            freeCompilerArgs.addAll(
+                listOf(
+                    "-Xwhen-guards",
+                    "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
+                    "-opt-in=androidx.compose.foundation.layout.ExperimentalLayoutApi",
+                    "-opt-in=androidx.compose.material.ExperimentalMaterialApi",
+                    "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
+                    "-opt-in=androidx.compose.ui.ExperimentalComposeUiApi",
+                    "-opt-in=androidx.compose.ui.test.ExperimentalTestApi",
+                    "-opt-in=com.google.accompanist.permissions.ExperimentalPermissionsApi",
+                    "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
+                    "-opt-in=kotlinx.coroutines.FlowPreview",
+                    "-opt-in=kotlin.contracts.ExperimentalContracts"
+                )
+            )
+            jvmTarget = JvmTarget.fromTarget("1.8")
         }
     }
     buildFeatures {
