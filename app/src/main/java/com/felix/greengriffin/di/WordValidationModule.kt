@@ -1,7 +1,7 @@
 package com.felix.greengriffin.di
 
-import com.felix.greengriffin.data.repository.DictionaryRepository
-import com.felix.greengriffin.validation.WordLookUp
+import com.felix.greengriffin.board.data.repository.LocalWordRepository
+import com.felix.greengriffin.board.domain.WordRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -12,6 +12,6 @@ import dagger.hilt.components.SingletonComponent
 abstract class WordValidationModule {
 
     @Binds
-    abstract fun bindWordLookUp(dictionaryRepository: DictionaryRepository): WordLookUp
+    abstract fun bindWordLookUp(localWordRepository: LocalWordRepository): WordRepository
 
 }

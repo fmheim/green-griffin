@@ -1,4 +1,4 @@
-package com.felix.greengriffin.data.local
+package com.felix.greengriffin.board.data.local
 
 import androidx.room.Dao
 import androidx.room.Query
@@ -9,6 +9,6 @@ interface DictionaryDao {
     @Query("SELECT * FROM dictionary WHERE language = :language AND length = :length AND first_letter = :firstLetter ORDER BY RANDOM() LIMIT 1")
     fun getRandomWord(language: String, length: Int, firstLetter: String): Flow<DictionaryWord?>
 
-    @Query("SELECT * FROM dictionary WHERE word = :wordInLowercase") // Note: All words are stored in lowercase
-    suspend fun getWord(wordInLowercase: String): List<DictionaryWord>
+    @Query("SELECT * FROM dictionary WHERE word IN (:wordsInLowercase)") // Note: All words are stored in lowercase
+    suspend fun getWords(wordsInLowercase: List<String>): List<DictionaryWord>
 }

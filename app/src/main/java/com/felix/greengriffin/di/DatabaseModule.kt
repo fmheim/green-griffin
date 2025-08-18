@@ -2,8 +2,8 @@ package com.felix.greengriffin.di
 
 import android.content.Context
 import androidx.room.Room
-import com.felix.greengriffin.data.local.AppDatabase
-import com.felix.greengriffin.data.local.DictionaryDao
+import com.felix.greengriffin.board.data.local.AppDatabase
+import com.felix.greengriffin.board.data.local.DictionaryDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

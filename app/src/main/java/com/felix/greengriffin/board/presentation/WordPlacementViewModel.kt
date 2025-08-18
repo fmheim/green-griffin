@@ -4,6 +4,7 @@ package com.felix.greengriffin.board.presentation
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.felix.greengriffin.board.domain.usecase.AreWordsValidUseCase
 import com.felix.greengriffin.board.presentation.GameState.Alignment.Horizontal
 import com.felix.greengriffin.board.presentation.GameState.Alignment.Single
 import com.felix.greengriffin.board.presentation.GameState.Alignment.Unaligned
@@ -16,7 +17,9 @@ import com.felix.greengriffin.board.presentation.components.StoneOnBoard
 import com.felix.greengriffin.board.presentation.components.Word
 import com.felix.greengriffin.board.presentation.components.asWord
 import com.felix.greengriffin.util.extensions.list.isEmptyOrOnlyNulls
-import com.felix.greengriffin.validation.WordLookUp
+import com.felix.greengriffin.board.domain.WordRepository
+import com.felix.greengriffin.board.domain.usecase.WordValidation
+import com.felix.greengriffin.board.domain.usecase.WordValidation.Valid
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -364,7 +367,7 @@ data class GameState(
             stone !is StoneInHand -> stonesInHand
             stone in stonesInHand -> stonesInHand - stone
             stone.value == 0 ->
-                stonesInHand.find { it.isJoker }?.let { stonesInHand.minus(it)} ?: stonesInHand
+                stonesInHand.find { it.isJoker }?.let { stonesInHand.minus(it) } ?: stonesInHand
 
             else -> stonesInHand.minus(stone)
         }
@@ -399,7 +402,7 @@ sealed interface GameEvent {
 
 @HiltViewModel
 class WordPlacementViewModel @Inject constructor(
-    private val wordLookUp: WordLookUp,
+    private val areWordsValidUseCase: AreWordsValidUseCase,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(GameState())
@@ -527,10 +530,15 @@ class WordPlacementViewModel @Inject constructor(
         _state.update { it.copy(isPromptLoading = true, isCurrentWordValid = null) }
 
         viewModelScope.launch(Dispatchers.IO) {
-            val allWordsValid = words.all { wordLookUp.getValidWords(it).also { validWords ->
-                println("word to check: $it, Valid words: $validWords")
-            }.isNotEmpty() } // todo: Do something with language of valid word in ui?
-            _state.update { it.copy(isPromptLoading = false, isCurrentWordValid = allWordsValid) }
+            val wordValidation = areWordsValidUseCase(
+                words = words,
+                allowedLanguages = listOf("sv", "de") // todo: specify languages from settings
+            )
+
+            println("WordValidation: $wordValidation")
+
+
+            _state.update { it.copy(isPromptLoading = false, isCurrentWordValid = wordValidation is Valid) }
         }
     }
 }

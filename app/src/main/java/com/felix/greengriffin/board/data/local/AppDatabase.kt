@@ -1,4 +1,4 @@
-package com.felix.greengriffin.data.local
+package com.felix.greengriffin.board.data.local
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
