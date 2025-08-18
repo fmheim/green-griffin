@@ -8,8 +8,7 @@ A modern implementation of a classic word building game for Android, built with 
 - 🎮 Classic word placement gameplay mechanics
 - 🎯 Drag and drop interface for tile placement 
 - 🃏 Joker Selector 
-- ✅ Real-time word validation using Gemini AI
-- 🔤 German language support
+- ✅ Fast word validation using local db (sv and de)
 - 🎲 Point calculation based on letter values and board multipliers
 - 🔄 Automatic tile refill system
 - 🏗️ Built with modern Android architecture
@@ -27,12 +26,10 @@ A modern implementation of a classic word building game for Android, built with 
 ## Upcoming Features
 
 ### Game Mechanics
-- [ ] Premium squares (double word score, double letter score)
-- [ ] Tile shuffling in rack
-- [ ] Quick actions for tile management
-  - [ ] Move all unlocked tiles from board to rack
-  - [ ] Only show tile refill button after word submission
-
+- [ ] New game mode where you need to reach a certain location by starting at a start location and moving to en end location
+  - [ ] blocking walls/tiles
+  - [ ] other special tiles: boost, joker, new letters, teleport
+  - [ ] coop vs competitive mode
 ### Game Modes
 - [ ] Meta screen implementation
   - [ ] Start new game
