@@ -27,6 +27,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
+import kotlin.collections.filter
+import kotlin.collections.filterNot
+import kotlin.collections.find
+import kotlin.collections.isNotEmpty
+import kotlin.collections.map
 
 
 @Immutable
@@ -120,6 +125,9 @@ data class GameState(
 
     val isAbleToDrawStones: Boolean
         get() = stonesInBag.isNotEmpty() && stonesInHand.size < 7 && unlockedStonesOnBoard.isEmpty()
+
+    val hasUnlockedStones: Boolean
+        get() = unlockedStonesOnBoard.isNotEmpty()
 
     fun lockInWord(): GameState {
         return copy(
@@ -311,6 +319,14 @@ data class GameState(
         )
     }
 
+    fun moveAllUnlockedStonesToHand() : GameState {
+        val unlocked = unlockedStonesOnBoard.toSet()
+        return copy(
+            stonesOnBoard = stonesOnBoard - unlocked,
+            stonesInHand = stonesInHand + unlocked.map { it.toStoneInHand(currentUserId) }
+        )
+    }
+
     fun moveStoneToBoard(
         stone: StoneData,
         rowIndex: Int,
@@ -352,6 +368,7 @@ sealed interface GameEvent {
 
     data class FieldEntered(val index: Int) : GameEvent
     data object SubmitClick : GameEvent
+    data object ReturnAllUnlockedStonesClick : GameEvent
     data class JokerSelected(val letter: Char) : GameEvent
     data object JokerSelectorDismissRequested : GameEvent
 }
@@ -389,6 +406,7 @@ class WordPlacementViewModel @Inject constructor(
 
             is GameEvent.JokerSelected -> onJokerSelected(letter = event.letter)
             GameEvent.JokerSelectorDismissRequested -> dismissJokerSelector()
+            GameEvent.ReturnAllUnlockedStonesClick -> returnAllUnlockedStones()
         }
     }
 
@@ -410,6 +428,15 @@ class WordPlacementViewModel @Inject constructor(
 
     private fun dismissJokerSelector() {
         _state.update { it.copy(jokerCoordinates = null) }
+    }
+
+    private fun returnAllUnlockedStones(){
+        _state.update { currentState ->
+            currentState
+                .moveAllUnlockedStonesToHand()
+                .clearEnteredField()
+                .copy(isValidPlacement = false, isCurrentWordValid = null)
+        }
     }
 
     private fun drawStones() =
