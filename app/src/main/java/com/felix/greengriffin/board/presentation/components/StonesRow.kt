@@ -60,7 +60,7 @@ fun StonesRow(
             DraggableStone(
                 width = width.dp,
                 data = data,
-                modifier = Modifier.Companion.animateItem()
+                modifier = Modifier.animateItem()
             )
             if (index < state.stonesInHand.lastIndex) Spacer(modifier = Modifier.width(spacedByDp.dp))
         }
