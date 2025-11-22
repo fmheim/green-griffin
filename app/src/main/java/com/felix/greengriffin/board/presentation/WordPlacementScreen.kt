@@ -156,19 +156,6 @@ fun WordPlacementScreen(
             onEvent = onEvent
         )
 
-        Button(
-            modifier = Modifier.padding(16.dp),
-            colors = ButtonDefaults.buttonColors().copy(),
-            shape = RoundedCornerShape(8.dp),
-            border = BorderStroke(width = 2.dp, color = MaterialTheme.colorScheme.outline),
-            onClick = { onEvent(GameEvent.DrawStonesClick) }) {
-            Text(text = "Steine auffüllen", color = MaterialTheme.colorScheme.onSecondary)
-            Icon(
-                painter = painterResource(R.drawable.ic_draw_stones),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSecondary
-            )
-        }
         Spacer(modifier = Modifier.weight(1f))
 
         AnimatedVisibility(

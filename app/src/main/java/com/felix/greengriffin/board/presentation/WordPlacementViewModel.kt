@@ -118,6 +118,9 @@ data class GameState(
                 && isValidPlacement
                 && isCurrentWordValid == true
 
+    val isAbleToDrawStones: Boolean
+        get() = stonesInBag.isNotEmpty() && stonesInHand.size < 7 && unlockedStonesOnBoard.isEmpty()
+
     fun lockInWord(): GameState {
         return copy(
             totalPoints = totalPoints + pointsOfCurrentPlacement,
@@ -348,7 +351,6 @@ sealed interface GameEvent {
     ) : GameEvent
 
     data class FieldEntered(val index: Int) : GameEvent
-    data object DrawStonesClick : GameEvent
     data object SubmitClick : GameEvent
     data class JokerSelected(val letter: Char) : GameEvent
     data object JokerSelectorDismissRequested : GameEvent
@@ -369,13 +371,15 @@ class WordPlacementViewModel @Inject constructor(
         _state.update {
             it.copy(stonesInBag = initialStonesInBag)
         }
+        if(_state.value.isAbleToDrawStones) {
+            drawStones()
+        }
     }
 
     fun onEvent(event: GameEvent) {
         when (event) {
             is GameEvent.FieldEntered -> _state.update { it.copy(enteredField = event.index) }
             is GameEvent.StoneDroppedOnHand -> moveStoneToHand(event.stoneData)
-            GameEvent.DrawStonesClick -> drawStones()
             GameEvent.SubmitClick -> onSubmitClick()
             is GameEvent.StoneDroppedOnBoard -> moveStoneToBoard(
                 stoneData = event.stoneData,
@@ -485,6 +489,7 @@ class WordPlacementViewModel @Inject constructor(
             return
         }
         _state.update { it.lockInWord() }
+        drawStones()
     }
 
     private fun validateWords(words: List<String>) {
