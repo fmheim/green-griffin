@@ -371,6 +371,7 @@ sealed interface GameEvent {
     data object ReturnAllUnlockedStonesClick : GameEvent
     data class JokerSelected(val letter: Char) : GameEvent
     data object JokerSelectorDismissRequested : GameEvent
+    data object ClearGameStateClick : GameEvent
 }
 
 
@@ -378,6 +379,7 @@ sealed interface GameEvent {
 class WordPlacementViewModel @Inject constructor(
     private val areWordsValidUseCase: AreWordsValidUseCase,
     private val isPlacementValidUseCase: IsPlacementValidUseCase,
+    private val gameStateRepository: com.felix.greengriffin.board.data.repository.GameStateRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(GameState())
@@ -385,11 +387,28 @@ class WordPlacementViewModel @Inject constructor(
 
 
     init {
-        _state.update {
-            it.copy(stonesInBag = initialStonesInBag)
+        viewModelScope.launch(Dispatchers.IO) {
+            // Try to load saved game state
+            val savedState = gameStateRepository.loadGameState()
+
+            if (savedState != null) {
+                // Restore saved state
+                _state.update { savedState }
+            } else {
+                // Initialize new game
+                _state.update {
+                    it.copy(stonesInBag = initialStonesInBag)
+                }
+                if (_state.value.isAbleToDrawStones) {
+                    drawStones()
+                }
+            }
         }
-        if(_state.value.isAbleToDrawStones) {
-            drawStones()
+    }
+
+    private fun saveGameState() {
+        viewModelScope.launch(Dispatchers.IO) {
+            gameStateRepository.saveGameState(_state.value)
         }
     }
 
@@ -407,6 +426,7 @@ class WordPlacementViewModel @Inject constructor(
             is GameEvent.JokerSelected -> onJokerSelected(letter = event.letter)
             GameEvent.JokerSelectorDismissRequested -> dismissJokerSelector()
             GameEvent.ReturnAllUnlockedStonesClick -> returnAllUnlockedStones()
+            GameEvent.ClearGameStateClick -> clearGameState()
         }
     }
 
@@ -428,18 +448,20 @@ class WordPlacementViewModel @Inject constructor(
 
     private fun dismissJokerSelector() {
         _state.update { it.copy(jokerCoordinates = null) }
+        saveGameState()
     }
 
-    private fun returnAllUnlockedStones(){
+    private fun returnAllUnlockedStones() {
         _state.update { currentState ->
             currentState
                 .moveAllUnlockedStonesToHand()
                 .clearEnteredField()
                 .copy(isValidPlacement = false, isCurrentWordValid = null)
         }
+        saveGameState()
     }
 
-    private fun drawStones() =
+    private fun drawStones() {
         _state.value
             .stonesInBag
             .shuffled()
@@ -449,6 +471,8 @@ class WordPlacementViewModel @Inject constructor(
                     currentState.moveStoneToHand(stone)
                 }
             }
+        saveGameState()
+    }
 
 
     private fun moveStoneToBoard(
@@ -467,6 +491,7 @@ class WordPlacementViewModel @Inject constructor(
                     )
                 )
             }
+            saveGameState()
             return
         }
 
@@ -480,6 +505,7 @@ class WordPlacementViewModel @Inject constructor(
         }
 
         onStoneMovedToBoard()
+        saveGameState()
     }
 
     private fun onStoneMovedToBoard() {
@@ -487,6 +513,7 @@ class WordPlacementViewModel @Inject constructor(
         val isValidPlacement = placementValidation is PlacementValidation.Valid
 
         _state.update { it.copy(isValidPlacement = isValidPlacement) }
+        saveGameState()
 
         if (isValidPlacement) {
             val words = _state.value.newlyCreatedWordsAsStrings
@@ -502,6 +529,7 @@ class WordPlacementViewModel @Inject constructor(
                 .clearEnteredField()
                 .copy(isValidPlacement = false, isCurrentWordValid = null)
         }
+        saveGameState()
     }
 
 
@@ -516,11 +544,13 @@ class WordPlacementViewModel @Inject constructor(
             return
         }
         _state.update { it.lockInWord() }
+        saveGameState()
         drawStones()
     }
 
     private fun validateWords(words: List<String>) {
         _state.update { it.copy(isPromptLoading = true, isCurrentWordValid = null) }
+        saveGameState()
 
         viewModelScope.launch(Dispatchers.IO) {
             val wordValidation = areWordsValidUseCase(
@@ -530,8 +560,25 @@ class WordPlacementViewModel @Inject constructor(
 
             println("WordValidation: $wordValidation")
 
+            _state.update {
+                it.copy(
+                    isPromptLoading = false,
+                    isCurrentWordValid = wordValidation is Valid
+                )
+            }
+            saveGameState()
+        }
+    }
 
-            _state.update { it.copy(isPromptLoading = false, isCurrentWordValid = wordValidation is Valid) }
+    private fun clearGameState() {
+        viewModelScope.launch(Dispatchers.IO) {
+            gameStateRepository.clearGameState()
+            _state.update {
+                GameState(stonesInBag = initialStonesInBag)
+            }
+            if (_state.value.isAbleToDrawStones) {
+                drawStones()
+            }
         }
     }
 }

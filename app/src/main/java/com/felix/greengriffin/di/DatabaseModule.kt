@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.felix.greengriffin.board.data.local.AppDatabase
 import com.felix.greengriffin.board.data.local.DictionaryDao
+import com.felix.greengriffin.board.data.local.GameStateDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -24,11 +25,17 @@ object DatabaseModule {
             "dictionary.db"
         )
             .createFromAsset("dictionary.db")
+            .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
     }
 
     @Provides
     fun provideDictionaryDao(appDatabase: AppDatabase): DictionaryDao {
         return appDatabase.dictionaryDao()
+    }
+
+    @Provides
+    fun provideGameStateDao(appDatabase: AppDatabase): GameStateDao {
+        return appDatabase.gameStateDao()
     }
 }

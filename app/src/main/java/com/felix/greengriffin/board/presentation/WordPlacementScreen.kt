@@ -18,7 +18,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -70,6 +69,7 @@ import com.felix.greengriffin.board.presentation.components.StoneInHand
 import com.felix.greengriffin.board.presentation.components.StoneOnBoard
 import com.felix.greengriffin.board.presentation.components.StoneSelector
 import com.felix.greengriffin.board.presentation.components.StonesRow
+import com.felix.greengriffin.core.presentation.icons.Delete
 import com.felix.greengriffin.core.presentation.theme.GreenGriffinTheme
 import com.felix.greengriffin.util.extensions.compose.animatedGradientBrush
 
@@ -92,42 +92,62 @@ fun WordPlacementScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.End
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Score: ",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 16.sp
-            )
-            AnimatedContent(
-                targetState = state.totalPoints,
-                transitionSpec = {
-                    ContentTransform(
-                        targetContentEnter =
-                            slideInVertically(
-                                initialOffsetY = { -2 * it },
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                    stiffness = Spring.StiffnessLow
-                                )
-                            ) + fadeIn(),
-                        initialContentExit = slideOutVertically(
-                            animationSpec = tween(
-                                5000,
-                                easing = FastOutLinearInEasing,
-                                delayMillis = 0
-                            ),
-                            targetOffsetY = { 200 * it }),
-                        sizeTransform = SizeTransform(clip = false)
-                    )
-                },
-                label = "score_animation"
-            ) { points ->
+            Button(
+                onClick = { onEvent(GameEvent.ClearGameStateClick) },
+                modifier = Modifier.size(36.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f),
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                ),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+            ) {
+                Icon(
+                    imageVector = Delete,
+                    contentDescription = "Clear game",
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = points.toString(),
+                    text = "Score: ",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 16.sp
                 )
+                AnimatedContent(
+                    targetState = state.totalPoints,
+                    transitionSpec = {
+                        ContentTransform(
+                            targetContentEnter =
+                                slideInVertically(
+                                    initialOffsetY = { -2 * it },
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    )
+                                ) + fadeIn(),
+                            initialContentExit = slideOutVertically(
+                                animationSpec = tween(
+                                    5000,
+                                    easing = FastOutLinearInEasing,
+                                    delayMillis = 0
+                                ),
+                                targetOffsetY = { 200 * it }),
+                            sizeTransform = SizeTransform(clip = false)
+                        )
+                    },
+                    label = "score_animation"
+                ) { points ->
+                    Text(
+                        text = points.toString(),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 16.sp
+                    )
+                }
             }
         }
         WordBoard(
@@ -232,7 +252,7 @@ fun WordBoard(
     onEvent: (GameEvent) -> Unit,
     state: GameState,
 ) {
-    val numColumns = 15
+    val numColumns = 10
     LazyVerticalGrid(
         columns = GridCells.Fixed(count = numColumns),
         userScrollEnabled = false,
