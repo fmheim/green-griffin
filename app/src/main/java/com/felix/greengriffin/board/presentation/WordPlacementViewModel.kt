@@ -17,8 +17,6 @@ import com.felix.greengriffin.board.presentation.components.StoneOnBoard
 import com.felix.greengriffin.board.presentation.components.Word
 import com.felix.greengriffin.board.presentation.components.asWord
 import com.felix.greengriffin.util.extensions.list.isEmptyOrOnlyNulls
-import com.felix.greengriffin.board.domain.WordRepository
-import com.felix.greengriffin.board.domain.usecase.WordValidation
 import com.felix.greengriffin.board.domain.usecase.WordValidation.Valid
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -496,8 +494,8 @@ class WordPlacementViewModel @Inject constructor(
     }
 
     private fun onStoneMovedToBoard() {
-        val isValid = _state.value.isValidWordPlacement
-        if (isValid) {
+        val isValidPlacement = _state.value.isValidWordPlacement
+        if (isValidPlacement) {
             val words =
                 _state.value.newlyCreatedWordsAsStrings // Todo: Also get vertical words (unlocked)
             validateWords(words)
