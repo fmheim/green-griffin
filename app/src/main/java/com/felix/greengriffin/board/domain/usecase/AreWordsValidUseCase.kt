@@ -23,7 +23,11 @@ class AreWordsValidUseCase @Inject constructor(
         allowedLanguages: List<String>,
     ): WordValidation {
         val wordsInDictionary = localWordRepository.getValidWords(words)
-        val isValidForLanguage = wordsInDictionary.isNotEmpty() && wordsInDictionary.all { it.language in allowedLanguages }
+        val allWordsAreInADictionary =
+            wordsInDictionary.map { it.word.lowercase() }.toSet() == words.map { it.lowercase() }
+                .toSet()
+        val isValidForLanguage =
+            allWordsAreInADictionary && wordsInDictionary.all { it.language in allowedLanguages }
         return when {
             isValidForLanguage -> WordValidation.Valid(wordsInDictionary)
             else -> WordValidation.Invalid(
