@@ -342,6 +342,7 @@ fun getRowIndex(gridIndex: Int, totalColumns: Int) = gridIndex / totalColumns
 
 val previewGameState = GameState(
     isCurrentWordValid = true,
+    isValidPlacement = true,
     totalPoints = 42,
     stonesInHand = listOf(
         StoneInHand(letter = 'A', value = 1, id = "stone1", userId = 1),

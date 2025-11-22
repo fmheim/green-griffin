@@ -5,6 +5,8 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.felix.greengriffin.board.domain.usecase.AreWordsValidUseCase
+import com.felix.greengriffin.board.domain.usecase.IsPlacementValidUseCase
+import com.felix.greengriffin.board.domain.usecase.PlacementValidation
 import com.felix.greengriffin.board.presentation.GameState.Alignment.Horizontal
 import com.felix.greengriffin.board.presentation.GameState.Alignment.Single
 import com.felix.greengriffin.board.presentation.GameState.Alignment.Unaligned
@@ -16,7 +18,6 @@ import com.felix.greengriffin.board.presentation.components.StoneInHand
 import com.felix.greengriffin.board.presentation.components.StoneOnBoard
 import com.felix.greengriffin.board.presentation.components.Word
 import com.felix.greengriffin.board.presentation.components.asWord
-import com.felix.greengriffin.util.extensions.list.isEmptyOrOnlyNulls
 import com.felix.greengriffin.board.domain.usecase.WordValidation.Valid
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -39,6 +40,7 @@ data class GameState(
     val totalPoints: Long = 0,
     val jokerCoordinates: JokerCoordinates? = null,
     private val isCurrentWordValid: Boolean? = null,
+    val isValidPlacement: Boolean = false,
 ) {
     enum class Alignment {
         Horizontal, Vertical, Single, Unaligned
@@ -111,55 +113,10 @@ data class GameState(
             }
         }
 
-    val isValidWordPlacement: Boolean
-        get() {
-            if (unlockedStonesOnBoard.isEmpty()) return false // Not valid: Need to place at least one stone
-
-            val firstStone = sortedUnlockedStonesOnBoard.first()
-            val lastStone = sortedUnlockedStonesOnBoard.last()
-
-            when (unlockedStonesAlignment) {
-                Unaligned -> return false // Not valid: Stones need to be in same row or column
-                Horizontal -> {
-                    for (columnIndex in firstStone.columnIndex..lastStone.columnIndex) {
-                        if (stonesOnBoard.none { it.columnIndex == columnIndex && it.rowIndex == firstStone.rowIndex }) {
-                            return false // Gap found, placement is invalid
-                        }
-                    }
-                }
-
-                Vertical -> { // Vertical alignment
-                    for (rowIndex in firstStone.rowIndex..lastStone.rowIndex) {
-                        if (stonesOnBoard.none { it.rowIndex == rowIndex && it.columnIndex == firstStone.columnIndex }) {
-                            return false // Gap found, placement is invalid
-                        }
-                    }
-                }
-
-                Single -> Unit // Continue, single stones can not have gap
-            }
-
-            val lockedNeighbourStones = mutableListOf<StoneData>()
-            for (unlockedStone in sortedUnlockedStonesOnBoard) {
-                val neighbourStones = listOf(
-                    stonesOnBoard::find { it.isToLeftOf(unlockedStone) },
-                    stonesOnBoard::find { it.isAbove(unlockedStone) },
-                    stonesOnBoard::find { it.isToRightOf(unlockedStone) },
-                    stonesOnBoard::find { it.isBelow(unlockedStone) }
-                )
-
-                if (neighbourStones.isEmptyOrOnlyNulls()) return false // Not valid: all stones need to be connected
-                val lockedStones = neighbourStones.filter { it?.isLocked == true }.filterNotNull()
-                lockedNeighbourStones.addAll(lockedStones)
-            }
-            return lockedNeighbourStones.isNotEmpty() || stonesOnBoard.none { it.isLocked } // connected to a locked stone or first move
-        }
-
     val isAbleToSubmit: Boolean
-        get() =
-            unlockedStonesOnBoard.isNotEmpty()
-                    && isValidWordPlacement
-                    && isCurrentWordValid == true
+        get() = unlockedStonesOnBoard.isNotEmpty()
+                && isValidPlacement
+                && isCurrentWordValid == true
 
     fun lockInWord(): GameState {
         return copy(
@@ -401,6 +358,7 @@ sealed interface GameEvent {
 @HiltViewModel
 class WordPlacementViewModel @Inject constructor(
     private val areWordsValidUseCase: AreWordsValidUseCase,
+    private val isPlacementValidUseCase: IsPlacementValidUseCase,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(GameState())
@@ -494,10 +452,13 @@ class WordPlacementViewModel @Inject constructor(
     }
 
     private fun onStoneMovedToBoard() {
-        val isValidPlacement = _state.value.isValidWordPlacement
+        val placementValidation = isPlacementValidUseCase(_state.value.stonesOnBoard)
+        val isValidPlacement = placementValidation is PlacementValidation.Valid
+
+        _state.update { it.copy(isValidPlacement = isValidPlacement) }
+
         if (isValidPlacement) {
-            val words =
-                _state.value.newlyCreatedWordsAsStrings // Todo: Also get vertical words (unlocked)
+            val words = _state.value.newlyCreatedWordsAsStrings
             validateWords(words)
         }
     }
@@ -508,6 +469,7 @@ class WordPlacementViewModel @Inject constructor(
             currentState
                 .moveStoneToHand(stoneData)
                 .clearEnteredField()
+                .copy(isValidPlacement = false, isCurrentWordValid = null)
         }
     }
 
@@ -515,6 +477,7 @@ class WordPlacementViewModel @Inject constructor(
     private fun onSubmitClick() {
         println("SubmitClick")
         val isValid = _state.value.isAbleToSubmit
+
         println("isValid: $isValid")
         if (!isValid) {
             // show error
