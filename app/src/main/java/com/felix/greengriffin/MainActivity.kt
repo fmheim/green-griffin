@@ -4,6 +4,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.systemBars
@@ -55,6 +59,35 @@ class MainActivity : ComponentActivity() {
                     NavDisplay(
                         backStack = backStack,
                         onBack = { backStack.removeLastOrNull() },
+                        transitionSpec = {
+                            slideInHorizontally(
+                                initialOffsetX = { it },
+                                animationSpec = tween(1000)
+                            ) togetherWith slideOutHorizontally(
+                                targetOffsetX = { -it },
+                                animationSpec = tween(1000)
+                            )
+                        },
+                        popTransitionSpec = {
+                            // Slide in from left when navigating back
+                            slideInHorizontally(
+                                initialOffsetX = { -it },
+                                animationSpec = tween(1000)
+                            ) togetherWith slideOutHorizontally(
+                                targetOffsetX = { it },
+                                animationSpec = tween(1000)
+                            )
+                        },
+                        predictivePopTransitionSpec = {
+                            // Slide in from left when navigating back
+                            slideInHorizontally(
+                                initialOffsetX = { -it },
+                                animationSpec = tween(1000)
+                            ) togetherWith slideOutHorizontally(
+                                targetOffsetX = { it },
+                                animationSpec = tween(1000)
+                            )
+                        },
                         entryProvider = entryProvider {
                             entry<RouteToHomeScreen> {
                                 HomeScreen(onStartGameClick = {
