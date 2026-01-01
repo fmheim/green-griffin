@@ -14,15 +14,12 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
@@ -30,15 +27,18 @@ import androidx.navigation3.ui.NavDisplay
 import com.felix.greengriffin.board.presentation.WordPlacementScreen
 import com.felix.greengriffin.board.presentation.WordPlacementViewModel
 import com.felix.greengriffin.core.presentation.theme.GreenGriffinTheme
+import com.felix.greengriffin.trails.presentation.levels.TrailLevelsScreen
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.serialization.Serializable
-import java.util.Map.entry
 
 @Serializable
 private data object RouteToHomeScreen : NavKey
 
 @Serializable
 private data object RouteToWordPlacementScreen : NavKey
+
+@Serializable
+private data object RouteToWordyTrails : NavKey
 
 
 @AndroidEntryPoint
@@ -50,7 +50,7 @@ class MainActivity : ComponentActivity() {
             val backStack = rememberNavBackStack(RouteToHomeScreen)
             val viewModel: WordPlacementViewModel = hiltViewModel()
             val state by viewModel.state.collectAsStateWithLifecycle()
-            GreenGriffinTheme {
+            GreenGriffinTheme(dynamicColor = false) {
                 Surface(
                     modifier = Modifier
                         .fillMaxSize(),
@@ -90,9 +90,13 @@ class MainActivity : ComponentActivity() {
                         },
                         entryProvider = entryProvider {
                             entry<RouteToHomeScreen> {
-                                HomeScreen(onStartGameClick = {
-                                    backStack.add(RouteToWordPlacementScreen)
-                                })
+                                HomeScreen(
+                                    onFreePlayClick = {
+                                        backStack.add(RouteToWordPlacementScreen)
+                                    },
+                                    onWordyTrailsClick = {
+                                        backStack.add(RouteToWordyTrails)
+                                    })
                             }
                             entry<RouteToWordPlacementScreen> {
                                 WordPlacementScreen(
@@ -103,7 +107,9 @@ class MainActivity : ComponentActivity() {
                                     onEvent = viewModel::onEvent
                                 )
                             }
-
+                            entry<RouteToWordyTrails> {
+                                TrailLevelsScreen(onBack = { backStack.removeLastOrNull() })
+                            }
                         }
                     )
                 }

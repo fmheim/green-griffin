@@ -14,8 +14,9 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun HomeScreen(
-    onStartGameClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onFreePlayClick: () -> Unit,
+    onWordyTrailsClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier.fillMaxSize(),
@@ -27,8 +28,11 @@ fun HomeScreen(
             style = MaterialTheme.typography.headlineLarge,
             modifier = Modifier.padding(bottom = 32.dp)
         )
-        Button(onClick = onStartGameClick) {
-            Text("Start New Game")
+        Button(onClick = onFreePlayClick) {
+            Text("Free Play")
+        }
+        Button(onClick = onWordyTrailsClick) {
+            Text("Wordy Trails")
         }
     }
 }
