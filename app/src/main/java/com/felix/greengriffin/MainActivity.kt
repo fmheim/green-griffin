@@ -18,14 +18,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
+import com.felix.greengriffin.board.presentation.GameMode
+import com.felix.greengriffin.board.presentation.GameMode.FreePlay
+import com.felix.greengriffin.board.presentation.GameState
+import com.felix.greengriffin.board.presentation.TrailLevel
 import com.felix.greengriffin.board.presentation.WordPlacementScreen
 import com.felix.greengriffin.board.presentation.WordPlacementViewModel
+import com.felix.greengriffin.board.presentation.trailLevels
 import com.felix.greengriffin.core.presentation.theme.GreenGriffinTheme
 import com.felix.greengriffin.trails.presentation.levels.TrailLevelsScreen
 import dagger.hilt.android.AndroidEntryPoint
@@ -35,7 +40,7 @@ import kotlinx.serialization.Serializable
 private data object RouteToHomeScreen : NavKey
 
 @Serializable
-private data object RouteToWordPlacementScreen : NavKey
+private data class RouteToWordPlacementScreen(val gameMode: GameMode) : NavKey
 
 @Serializable
 private data object RouteToWordyTrails : NavKey
@@ -48,8 +53,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val backStack = rememberNavBackStack(RouteToHomeScreen)
-            val viewModel: WordPlacementViewModel = hiltViewModel()
-            val state by viewModel.state.collectAsStateWithLifecycle()
             GreenGriffinTheme(dynamicColor = false) {
                 Surface(
                     modifier = Modifier
@@ -92,23 +95,45 @@ class MainActivity : ComponentActivity() {
                             entry<RouteToHomeScreen> {
                                 HomeScreen(
                                     onFreePlayClick = {
-                                        backStack.add(RouteToWordPlacementScreen)
+                                        backStack.add(RouteToWordPlacementScreen(gameMode = FreePlay))
                                     },
                                     onWordyTrailsClick = {
                                         backStack.add(RouteToWordyTrails)
                                     })
                             }
                             entry<RouteToWordPlacementScreen> {
+                                val viewModel: WordPlacementViewModel = hiltViewModel()
+                                val state by viewModel.state.collectAsStateWithLifecycle(
+                                    initialValue = GameState(gameMode = it.gameMode)
+                                )
                                 WordPlacementScreen(
                                     modifier = Modifier
                                         .windowInsetsPadding(WindowInsets.systemBars)
                                         .verticalScroll(state = rememberScrollState()),
-                                    state = state,
+                                    state = state.copy(gameMode = it.gameMode),
                                     onEvent = viewModel::onEvent
                                 )
                             }
                             entry<RouteToWordyTrails> {
-                                TrailLevelsScreen(onBack = { backStack.removeLastOrNull() })
+                                TrailLevelsScreen(
+                                    onBack = { backStack.removeLastOrNull() },
+                                    onLevelClick = { level ->
+                                        backStack.add(
+                                            RouteToWordPlacementScreen(
+                                                gameMode = GameMode.Trails(
+                                                    level = trailLevels.firstOrNull { it.level == level }
+                                                        ?: TrailLevel(
+                                                            level = 0,
+                                                            boardSize = 10,
+                                                            startFields = setOf(),
+                                                            goalFields = setOf(),
+                                                            blockedField = setOf()
+                                                        )
+                                                )
+                                            )
+                                        )
+                                    }
+                                )
                             }
                         }
                     )

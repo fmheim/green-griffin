@@ -25,6 +25,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -53,6 +54,7 @@ import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -62,6 +64,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.felix.greengriffin.R
 import com.felix.greengriffin.board.presentation.GameEvent.StoneDroppedOnBoard
+import com.felix.greengriffin.board.presentation.GameMode.FreePlay
+import com.felix.greengriffin.board.presentation.GameMode.Trails
 import com.felix.greengriffin.board.presentation.components.DraggableStone
 import com.felix.greengriffin.board.presentation.components.StoneData
 import com.felix.greengriffin.board.presentation.components.StoneInBag
@@ -252,30 +256,36 @@ fun WordBoard(
     onEvent: (GameEvent) -> Unit,
     state: GameState,
 ) {
-    val numColumns = 10
+    val boardSize = state.boardSize
     LazyVerticalGrid(
-        columns = GridCells.Fixed(count = numColumns),
+        columns = GridCells.Fixed(count = boardSize),
         userScrollEnabled = false,
         modifier = modifier
             .height((LocalConfiguration.current.screenWidthDp - (2f * 8f)).dp)
     ) {
-        items(numColumns * numColumns) { index ->
+        items(boardSize * boardSize) { index ->
+            val columnIndex = remember(index, boardSize) {
+                getColumnIndex(
+                    gridIndex = index,
+                    totalColumns = boardSize
+                )
+            }
+            val rowIndex = remember(index, boardSize) {
+                getRowIndex(
+                    gridIndex = index,
+                    totalColumns = boardSize
+                )
+            }
             Box(
                 modifier = Modifier
-                    .zIndex(numColumns * numColumns - index.toFloat())
+                    .zIndex(boardSize * boardSize - index.toFloat())
                     .aspectRatio(1f)
                     .background(color = if (state.enteredField == index) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.secondaryContainer)
                     .dragAndDropTarget(
                         shouldStartDragAndDrop = {
                             state.isPositionOnBoardAvailable(
-                                columnIndex = getColumnIndex(
-                                    gridIndex = index,
-                                    totalColumns = numColumns
-                                ),
-                                rowIndex = getRowIndex(
-                                    gridIndex = index,
-                                    totalColumns = numColumns
-                                )
+                                columnIndex = columnIndex,
+                                rowIndex = rowIndex
                             ) && it // check if position is taken
                                 .mimeTypes()
                                 .contains(ClipDescription.MIMETYPE_TEXT_PLAIN)
@@ -288,14 +298,8 @@ fun WordBoard(
                                         ?: return false
                                     onEvent(
                                         StoneDroppedOnBoard(
-                                            columnIndex = getColumnIndex(
-                                                gridIndex = index,
-                                                totalColumns = numColumns
-                                            ),
-                                            rowIndex = getRowIndex(
-                                                gridIndex = index,
-                                                totalColumns = numColumns
-                                            ),
+                                            columnIndex = columnIndex,
+                                            rowIndex = rowIndex,
                                             stoneData = data,
                                         )
                                     )
@@ -310,18 +314,14 @@ fun WordBoard(
                         }
                     ),
                 content = {
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .border(width = 1.dp, color = MaterialTheme.colorScheme.outline)
-                    )
+                    BoardField(state, columnIndex, rowIndex)
                     state.stonesOnBoard.find { stone ->
                         stone.columnIndex == getColumnIndex(
                             gridIndex = index,
-                            totalColumns = numColumns
+                            totalColumns = boardSize
                         ) && stone.rowIndex == getRowIndex(
                             gridIndex = index,
-                            totalColumns = numColumns
+                            totalColumns = boardSize
                         )
                     }?.let {
                         DraggableStone(
@@ -333,6 +333,40 @@ fun WordBoard(
             )
         }
     }
+}
+
+@Composable
+private fun BoxScope.BoardField(
+    state: GameState,
+    columnIndex: Int,
+    rowIndex: Int,
+) {
+    Box(
+        modifier = Modifier
+            .matchParentSize()
+            .border(width = 1.dp, color = MaterialTheme.colorScheme.outline)
+            .background(
+                color = when (state.gameMode) {
+                    is Trails -> {
+                        if (state.gameMode.isStartField(
+                                column = columnIndex,
+                                row = rowIndex
+                            )){
+                            MaterialTheme.colorScheme.tertiary
+                        } else if (state.gameMode.isGoalField(
+                                column = columnIndex,
+                                row = rowIndex
+                            )){
+                            MaterialTheme.colorScheme.tertiary
+                        } else  {
+                            Color.Transparent
+                        }
+                    }
+
+                    FreePlay -> Color.Transparent
+                }
+            )
+    )
 }
 
 

@@ -1,9 +1,11 @@
 package com.felix.greengriffin.board.presentation
 
 
+import android.R.attr.data
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.felix.greengriffin.board.data.repository.GameStateRepository
 import com.felix.greengriffin.board.domain.usecase.AreWordsValidUseCase
 import com.felix.greengriffin.board.domain.usecase.IsPlacementValidUseCase
 import com.felix.greengriffin.board.domain.usecase.PlacementValidation
@@ -33,9 +35,47 @@ import kotlin.collections.find
 import kotlin.collections.isNotEmpty
 import kotlin.collections.map
 
+const val DEFAULT_BOARD_SIZE = 10
+
+data class Field(
+    val row: Int,
+    val column: Int,
+)
+
+data class TrailLevel(
+    val level: Int,
+    val boardSize: Int,
+    val startFields: Set<Field>,
+    val goalFields: Set<Field>,
+    val blockedField: Set<Field>,
+)
+
+val trailLevels = setOf(
+    TrailLevel(
+        level = 1,
+        boardSize = 10,
+        startFields = List(10) { Field(row = it, column = 0) }.toSet(),
+        goalFields = List(10) { Field(row = it, column = 9) }.toSet(),
+        blockedField = setOf()
+    )
+)
+
+sealed interface GameMode {
+    data object FreePlay : GameMode
+    data class Trails(val level: TrailLevel) : GameMode {
+        fun isStartField(row: Int, column: Int) =
+            level.startFields.contains(row = row, column = column)
+        fun isGoalField(row: Int, column: Int) =
+            level.goalFields.contains(row = row, column = column)
+    }
+}
+
+private fun Set<Field>.contains(row: Int, column: Int) =
+    Field(row = row, column = column) in this
 
 @Immutable
 data class GameState(
+    val gameMode: GameMode = GameMode.FreePlay,
     val stonesInHand: List<StoneInHand> = emptyList(),
     val stonesOnBoard: Set<StoneOnBoard> = emptySet(),
     val stonesInBag: Set<StoneInBag> = emptySet(),
@@ -54,6 +94,12 @@ data class GameState(
     data class JokerCoordinates(val row: Int, val column: Int)
 
     val isJokerSelectorVisible get() = jokerCoordinates != null
+
+    val boardSize get() = if(gameMode is GameMode.Trails) {
+        gameMode.level.boardSize
+    } else {
+        DEFAULT_BOARD_SIZE
+    }
 
     val firstEmptyCoordinates: JokerCoordinates
         get() {
@@ -319,7 +365,7 @@ data class GameState(
         )
     }
 
-    fun moveAllUnlockedStonesToHand() : GameState {
+    fun moveAllUnlockedStonesToHand(): GameState {
         val unlocked = unlockedStonesOnBoard.toSet()
         return copy(
             stonesOnBoard = stonesOnBoard - unlocked,
@@ -379,7 +425,7 @@ sealed interface GameEvent {
 class WordPlacementViewModel @Inject constructor(
     private val areWordsValidUseCase: AreWordsValidUseCase,
     private val isPlacementValidUseCase: IsPlacementValidUseCase,
-    private val gameStateRepository: com.felix.greengriffin.board.data.repository.GameStateRepository,
+    private val gameStateRepository: GameStateRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(GameState())

@@ -2,6 +2,7 @@ package com.felix.greengriffin.trails.presentation.levels
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -29,7 +30,7 @@ import kotlin.random.nextInt
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun TrailLevelsScreen(onBack: () -> Unit) {
+fun TrailLevelsScreen(onBack: () -> Unit, onLevelClick: (level: Int) -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -53,7 +54,11 @@ fun TrailLevelsScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             for (i in 1..100) {
-                LevelBox(level = i, completed = i < 5)
+                LevelBox(
+                    level = i,
+                    completed = i < 5,
+                    onClick = { onLevelClick(i) }
+                )
             }
         }
     }
@@ -61,7 +66,7 @@ fun TrailLevelsScreen(onBack: () -> Unit) {
 }
 
 @Composable
-fun LevelBox(level: Int, completed: Boolean) {
+fun LevelBox(level: Int, completed: Boolean, onClick: () -> Unit) {
     val random = Random(level)
     val shape = RoundedCornerShape(
         topStartPercent = random.nextInt(20..100),
@@ -71,6 +76,7 @@ fun LevelBox(level: Int, completed: Boolean) {
     )
     Box(
         modifier = Modifier
+            .clickable(onClick = onClick)
             .size(120.dp)
             .background(
                 if (completed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
@@ -96,6 +102,7 @@ fun LevelBox(level: Int, completed: Boolean) {
 @Composable
 fun TrailLevelsScreenPreview() {
     TrailLevelsScreen(
-        onBack = { }
+        onBack = { },
+        onLevelClick = { }
     )
 }
