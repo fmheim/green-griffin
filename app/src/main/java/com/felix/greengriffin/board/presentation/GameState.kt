@@ -32,7 +32,22 @@ val trailLevels = setOf(
         startFields = List(10) { Field(row = it, column = 0) }.toSet(),
         goalFields = List(10) { Field(row = it, column = 9) }.toSet(),
         blockedField = setOf()
-    )
+    ),
+    TrailLevel(
+        index = 2,
+        boardSize = 10,
+        startFields = List(10) { Field(row = 0, column = it) }.toSet(),
+        goalFields = List(10) { Field(row = 9, column = it) }.toSet(),
+        blockedField = setOf()
+    ),
+    TrailLevel(
+        index = 3,
+        boardSize = 10,
+        startFields = List(6) { Field(row = it, column = 0) }.toSet(),
+        goalFields = List(6) { Field(row = it + 5, column = 9) }.toSet(),
+        blockedField = setOf()
+    ),
+
 )
 
 sealed interface GameMode {
@@ -65,7 +80,7 @@ sealed interface GameMode {
             trailLevel: TrailLevel? = null,
         ): GameMode = when (id) {
             FREE_PLAY_ID -> FreePlay
-            TRAILS_ID  -> {
+            TRAILS_ID -> {
                 if (trailLevel != null) {
                     Trails(trailLevel)
                 } else {
@@ -94,6 +109,7 @@ data class GameState(
     val jokerCoordinates: JokerCoordinates? = null,
     private val isCurrentWordValid: Boolean? = null,
     val isValidPlacement: Boolean = false,
+    val errorText: String? = null,
 ) {
     enum class Alignment {
         Horizontal, Vertical, Single, Unaligned
@@ -225,6 +241,9 @@ data class GameState(
 
         return createdWords
     }
+
+    val hasError: Boolean
+        get() = errorText != null
 
     private fun getWordsFromHorizontalPlacement(): List<Word> {
         val createdWords = mutableListOf<Word>()

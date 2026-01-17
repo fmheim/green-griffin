@@ -65,7 +65,9 @@ class MainActivity : ComponentActivity() {
                         onBack = { backStack.removeLastOrNull() },
                         entryDecorators = listOf(
                             rememberSaveableStateHolderNavEntryDecorator(),
-                            rememberViewModelStoreNavEntryDecorator()
+                            rememberViewModelStoreNavEntryDecorator(removeViewModelStoreOnPop = {
+                                true
+                            })
                         ),
                         transitionSpec = {
                             slideInHorizontally(
@@ -118,7 +120,7 @@ class MainActivity : ComponentActivity() {
                                     modifier = Modifier
                                         .windowInsetsPadding(WindowInsets.systemBars)
                                         .verticalScroll(state = rememberScrollState()),
-                                    state = state.copy(gameMode = it.gameMode),
+                                    state = state,
                                     onEvent = viewModel::onEvent
                                 )
                             }

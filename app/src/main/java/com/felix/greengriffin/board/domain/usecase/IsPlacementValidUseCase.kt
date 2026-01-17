@@ -1,5 +1,8 @@
 package com.felix.greengriffin.board.domain.usecase
 
+import com.felix.greengriffin.board.domain.usecase.GameModeViolation.FirstWordNotOnCorrectStartPosition
+import com.felix.greengriffin.board.presentation.GameMode
+import com.felix.greengriffin.board.presentation.TrailLevel
 import com.felix.greengriffin.board.presentation.components.StoneData
 import com.felix.greengriffin.board.presentation.components.StoneOnBoard
 import com.felix.greengriffin.util.extensions.list.isEmptyOrOnlyNulls
@@ -11,12 +14,18 @@ sealed interface PlacementValidation {
     data object NotAligned : PlacementValidation
     data object HasGaps : PlacementValidation
     data object NotConnected : PlacementValidation
+    data class Violation(val gameModeViolation: GameModeViolation) : PlacementValidation
+}
+
+enum class GameModeViolation {
+    FirstWordNotOnCorrectStartPosition;
 }
 
 class IsPlacementValidUseCase @Inject constructor() {
 
     operator fun invoke(
         stonesOnBoard: Set<StoneOnBoard>,
+        gameMode: GameMode,
     ): PlacementValidation {
         val unlockedStonesOnBoard = stonesOnBoard.filterNot(StoneOnBoard::isLocked)
 
@@ -56,7 +65,7 @@ class IsPlacementValidUseCase @Inject constructor() {
             Alignment.Unaligned -> return PlacementValidation.NotAligned
         }
 
-        // Check connection to existing locked stones
+
         val lockedNeighbourStones = mutableListOf<StoneData>()
 
         for (unlockedStone in sortedUnlockedStones) {
@@ -75,15 +84,22 @@ class IsPlacementValidUseCase @Inject constructor() {
             lockedNeighbourStones.addAll(lockedStones)
         }
 
-        // Either connected to a locked stone or first move (no locked stones on board)
         val isConnectedOrFirstMove =
             lockedNeighbourStones.isNotEmpty() || stonesOnBoard.none { it.isLocked }
 
-        return if (isConnectedOrFirstMove) {
-            PlacementValidation.Valid
-        } else {
-            PlacementValidation.NotConnected
+        val gameModeValidation = when (gameMode) {
+            is GameMode.FreePlay -> PlacementValidation.Valid
+            is GameMode.Trails -> validateTrailGameMode(
+                trailLevel = gameMode.level,
+                stonesOnBoard = stonesOnBoard
+            )
         }
+
+        return when {
+            !isConnectedOrFirstMove -> PlacementValidation.NotConnected
+            else -> gameModeValidation
+        }
+
     }
 
     private fun getAlignment(stones: List<StoneOnBoard>): Alignment {
@@ -101,6 +117,28 @@ class IsPlacementValidUseCase @Inject constructor() {
             Alignment.Vertical -> stones.sortedBy(StoneOnBoard::rowIndex)
             else -> stones
         }
+    }
+
+    private fun validateTrailGameMode(
+        trailLevel: TrailLevel,
+        stonesOnBoard: Set<StoneOnBoard>,
+    ): PlacementValidation {
+        val isOutsideStart = isTrailStartingOutsideStartFields(
+            trailLevel = trailLevel,
+            stonesOnBoard = stonesOnBoard
+        )
+        return when {
+            isOutsideStart -> PlacementValidation.Violation(gameModeViolation = FirstWordNotOnCorrectStartPosition)
+            else -> PlacementValidation.Valid
+        }
+    }
+
+    private fun isTrailStartingOutsideStartFields(
+        trailLevel: TrailLevel,
+        stonesOnBoard: Set<StoneOnBoard>,
+    ): Boolean {
+        val startFields = trailLevel.startFields
+        return (stonesOnBoard.map(StoneOnBoard::toField).none { it in startFields })
     }
 
     private enum class Alignment {

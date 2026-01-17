@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.felix.greengriffin.RouteToWordPlacementScreen
 import com.felix.greengriffin.board.data.repository.GameStateRepository
 import com.felix.greengriffin.board.domain.usecase.AreWordsValidUseCase
+import com.felix.greengriffin.board.domain.usecase.GameModeViolation.FirstWordNotOnCorrectStartPosition
 import com.felix.greengriffin.board.domain.usecase.IsPlacementValidUseCase
 import com.felix.greengriffin.board.domain.usecase.PlacementValidation
 import com.felix.greengriffin.board.domain.usecase.WordValidation.Valid
@@ -30,7 +31,7 @@ class WordPlacementViewModel @AssistedInject constructor(
     private val areWordsValidUseCase: AreWordsValidUseCase,
     private val isPlacementValidUseCase: IsPlacementValidUseCase,
     private val gameStateRepository: GameStateRepository,
-    @Assisted val navKey: RouteToWordPlacementScreen
+    @Assisted val navKey: RouteToWordPlacementScreen,
 ) : ViewModel() {
 
     @AssistedFactory
@@ -181,7 +182,10 @@ class WordPlacementViewModel @AssistedInject constructor(
     }
 
     private fun onStoneMovedToBoard() {
-        val placementValidation = isPlacementValidUseCase(_state.value.stonesOnBoard)
+        val placementValidation = isPlacementValidUseCase(
+            stonesOnBoard = _state.value.stonesOnBoard,
+            gameMode = _state.value.gameMode,
+        )
         val isValidPlacement = placementValidation is PlacementValidation.Valid
 
         _state.update { it.copy(isValidPlacement = isValidPlacement) }
@@ -191,6 +195,21 @@ class WordPlacementViewModel @AssistedInject constructor(
             val words = _state.value.newlyCreatedWordsAsStrings
             validateWords(words)
         }
+        setErrorText(placementValidation)
+    }
+
+    private fun setErrorText(placementValidation: PlacementValidation) {
+        val errorText = when (placementValidation) {
+            PlacementValidation.HasGaps -> "Close the gaps"
+            PlacementValidation.NoStonesPlaced -> null
+            PlacementValidation.NotAligned -> "Align the stones"
+            PlacementValidation.NotConnected -> "Connect the stones"
+            PlacementValidation.Valid -> null
+            is PlacementValidation.Violation -> when (placementValidation.gameModeViolation) {
+                FirstWordNotOnCorrectStartPosition -> "Start trail on a starting field"
+            }
+        }
+        _state.update { it.copy(errorText = errorText) }
     }
 
     private fun moveStoneToHand(stoneData: StoneData) {
@@ -244,9 +263,13 @@ class WordPlacementViewModel @AssistedInject constructor(
 
     private fun clearGameState() {
         viewModelScope.launch(Dispatchers.IO) {
-            gameStateRepository.clearGameState(gameModeId = 1, level = null)
+            val gameMode = state.value.gameMode
+            gameStateRepository.clearGameState(
+                gameModeId = gameMode.id,
+                level = if (gameMode is GameMode.Trails) gameMode.level.index else null
+            )
             _state.update {
-                GameState(stonesInBag = initialStonesInBag)
+                GameState(gameMode = gameMode, stonesInBag = initialStonesInBag)
             }
             if (_state.value.isAbleToDrawStones) {
                 drawStones()

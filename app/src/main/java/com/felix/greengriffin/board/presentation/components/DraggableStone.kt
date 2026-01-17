@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.felix.greengriffin.board.presentation.Field
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -119,17 +120,16 @@ data class StoneOnBoard(
     val isLocked: Boolean,
 ) : StoneData() {
 
-    fun toStoneInBag() = StoneInBag(
-        letter = letter,
-        value = value,
-        id = id
-    )
-
     fun toStoneInHand(userId: Int) = StoneInHand(
         letter = letter,
         value = value,
         id = id,
         userId = userId,
+    )
+
+    fun toField() = Field(
+        row = rowIndex,
+        column = columnIndex,
     )
 
     fun isToLeftOf(other: StoneOnBoard) =

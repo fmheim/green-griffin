@@ -44,6 +44,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -62,6 +63,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.room.util.getColumnIndex
 import com.felix.greengriffin.R
 import com.felix.greengriffin.board.presentation.GameEvent.StoneDroppedOnBoard
 import com.felix.greengriffin.board.presentation.GameMode.FreePlay
@@ -181,6 +183,23 @@ fun WordPlacementScreen(
         )
 
         Spacer(modifier = Modifier.weight(1f))
+
+        AnimatedVisibility(
+            visible = state.hasError,
+            enter = slideInVertically(
+                initialOffsetY = { it },
+                animationSpec = spring(
+                    dampingRatio = 0.3f,
+                    stiffness = 100f,
+                    visibilityThreshold = IntOffset.VisibilityThreshold
+                )
+            ),
+            exit = slideOutVertically(targetOffsetY = { 2 * it })
+        ) {
+            Box(modifier = Modifier.padding(16.dp)){
+                Text(text = state.errorText.orEmpty(), color = MaterialTheme.colorScheme.error)
+            }
+        }
 
         AnimatedVisibility(
             visible = state.isAbleToSubmit,
