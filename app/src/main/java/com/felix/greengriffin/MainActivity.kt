@@ -17,7 +17,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -29,7 +28,6 @@ import androidx.navigation3.ui.NavDisplay
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import com.felix.greengriffin.board.presentation.GameMode
 import com.felix.greengriffin.board.presentation.GameMode.FreePlay
-import com.felix.greengriffin.board.presentation.GameState
 import com.felix.greengriffin.board.presentation.TrailLevel
 import com.felix.greengriffin.board.presentation.WordPlacementScreen
 import com.felix.greengriffin.board.presentation.WordPlacementViewModel
