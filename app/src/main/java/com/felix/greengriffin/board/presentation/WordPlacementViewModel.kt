@@ -1,14 +1,15 @@
 package com.felix.greengriffin.board.presentation
 
 
-import android.R.attr.data
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.felix.greengriffin.RouteToWordPlacementScreen
 import com.felix.greengriffin.board.data.repository.GameStateRepository
 import com.felix.greengriffin.board.domain.usecase.AreWordsValidUseCase
 import com.felix.greengriffin.board.domain.usecase.IsPlacementValidUseCase
 import com.felix.greengriffin.board.domain.usecase.PlacementValidation
+import com.felix.greengriffin.board.domain.usecase.WordValidation.Valid
 import com.felix.greengriffin.board.presentation.GameState.Alignment.Horizontal
 import com.felix.greengriffin.board.presentation.GameState.Alignment.Single
 import com.felix.greengriffin.board.presentation.GameState.Alignment.Unaligned
@@ -20,20 +21,18 @@ import com.felix.greengriffin.board.presentation.components.StoneInHand
 import com.felix.greengriffin.board.presentation.components.StoneOnBoard
 import com.felix.greengriffin.board.presentation.components.Word
 import com.felix.greengriffin.board.presentation.components.asWord
-import com.felix.greengriffin.board.domain.usecase.WordValidation.Valid
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 import java.util.UUID
-import javax.inject.Inject
-import kotlin.collections.filter
-import kotlin.collections.filterNot
-import kotlin.collections.find
-import kotlin.collections.isNotEmpty
-import kotlin.collections.map
 
 const val DEFAULT_BOARD_SIZE = 10
 
@@ -43,7 +42,7 @@ data class Field(
 )
 
 data class TrailLevel(
-    val level: Int,
+    val index: Int,
     val boardSize: Int,
     val startFields: Set<Field>,
     val goalFields: Set<Field>,
@@ -52,7 +51,7 @@ data class TrailLevel(
 
 val trailLevels = setOf(
     TrailLevel(
-        level = 1,
+        index = 1,
         boardSize = 10,
         startFields = List(10) { Field(row = it, column = 0) }.toSet(),
         goalFields = List(10) { Field(row = it, column = 9) }.toSet(),
@@ -61,12 +60,45 @@ val trailLevels = setOf(
 )
 
 sealed interface GameMode {
-    data object FreePlay : GameMode
+    val id: Int
+
+    data object FreePlay : GameMode {
+        override val id: Int
+            get() = FREE_PLAY_ID
+    }
+
     data class Trails(val level: TrailLevel) : GameMode {
+
+        override val id: Int
+            get() = TRAILS_ID
+
         fun isStartField(row: Int, column: Int) =
             level.startFields.contains(row = row, column = column)
+
         fun isGoalField(row: Int, column: Int) =
             level.goalFields.contains(row = row, column = column)
+
+
+    }
+
+    companion object {
+        const val FREE_PLAY_ID = 1
+        const val TRAILS_ID = 2
+        fun fromId(
+            id: Int,
+            trailLevel: TrailLevel? = null,
+        ): GameMode = when (id) {
+            FREE_PLAY_ID -> FreePlay
+            TRAILS_ID  -> {
+                if (trailLevel != null) {
+                    Trails(trailLevel)
+                } else {
+                    Trails(trailLevels.first())
+                }
+            }
+
+            else -> error("Unknown GameMode id: $id, level: $trailLevel")
+        }
     }
 }
 
@@ -95,11 +127,12 @@ data class GameState(
 
     val isJokerSelectorVisible get() = jokerCoordinates != null
 
-    val boardSize get() = if(gameMode is GameMode.Trails) {
-        gameMode.level.boardSize
-    } else {
-        DEFAULT_BOARD_SIZE
-    }
+    val boardSize
+        get() = if (gameMode is GameMode.Trails) {
+            gameMode.level.boardSize
+        } else {
+            DEFAULT_BOARD_SIZE
+        }
 
     val firstEmptyCoordinates: JokerCoordinates
         get() {
@@ -399,6 +432,32 @@ data class GameState(
 
     fun clearEnteredField(): GameState = copy(enteredField = null)
 
+    fun asSavedGame(): SavedGame = SavedGame(
+        gameModeId = gameMode.id,
+        levelIndex = if (gameMode is GameMode.Trails) gameMode.level.index else -1,
+        totalPoints = totalPoints,
+        stonesInHand = stonesInHand,
+        stonesOnBoard = stonesOnBoard,
+        stonesInBag = stonesInBag,
+    )
+}
+
+@Serializable
+data class SavedGame(
+    val gameModeId: Int,
+    val levelIndex: Int,
+    val totalPoints: Long,
+    val stonesInHand: List<StoneInHand>,
+    val stonesOnBoard: Set<StoneOnBoard>,
+    val stonesInBag: Set<StoneInBag>,
+) {
+    fun asGameState(): GameState = GameState(
+        gameMode = GameMode.fromId(gameModeId, trailLevels.find { it.index == levelIndex }),
+        totalPoints = totalPoints,
+        stonesInHand = stonesInHand,
+        stonesOnBoard = stonesOnBoard,
+        stonesInBag = stonesInBag,
+    )
 }
 
 sealed interface GameEvent {
@@ -421,40 +480,62 @@ sealed interface GameEvent {
 }
 
 
-@HiltViewModel
-class WordPlacementViewModel @Inject constructor(
+@HiltViewModel(assistedFactory = WordPlacementViewModel.Factory::class)
+class WordPlacementViewModel @AssistedInject constructor(
     private val areWordsValidUseCase: AreWordsValidUseCase,
     private val isPlacementValidUseCase: IsPlacementValidUseCase,
     private val gameStateRepository: GameStateRepository,
+    @Assisted val navKey: RouteToWordPlacementScreen
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(GameState())
-    val state get() = _state.asStateFlow()
+    @AssistedFactory
+    interface Factory {
+        fun create(navKey: RouteToWordPlacementScreen): WordPlacementViewModel
+    }
+
+
+    private val _state = MutableStateFlow(value = GameState(gameMode = navKey.gameMode))
+    val state: StateFlow<GameState> = _state.asStateFlow()
 
 
     init {
-        viewModelScope.launch(Dispatchers.IO) {
-            // Try to load saved game state
-            val savedState = gameStateRepository.loadGameState()
+        loadInitialGameState()
+    }
 
-            if (savedState != null) {
-                // Restore saved state
-                _state.update { savedState }
-            } else {
-                // Initialize new game
-                _state.update {
-                    it.copy(stonesInBag = initialStonesInBag)
-                }
-                if (_state.value.isAbleToDrawStones) {
-                    drawStones()
-                }
+    private fun loadInitialGameState() {
+        viewModelScope.launch {
+            val savedState = loadSavedState()
+            when {
+                savedState != null -> _state.update { savedState }
+                else -> initializeNewGame()
             }
+        }
+    }
+
+    private suspend fun loadSavedState(): GameState? {
+        val initialState = _state.value
+        val savedState = gameStateRepository.loadGameState(
+            gameModeId = initialState.gameMode.id,
+            level = when (initialState.gameMode) {
+                is GameMode.Trails -> initialState.gameMode.level.index
+                else -> -1
+            }
+        )?.asGameState()
+        return savedState
+    }
+
+    private fun initializeNewGame() {
+        _state.update {
+            it.copy(stonesInBag = initialStonesInBag)
+        }
+        if (_state.value.isAbleToDrawStones) {
+            drawStones()
         }
     }
 
     private fun saveGameState() {
         viewModelScope.launch(Dispatchers.IO) {
-            gameStateRepository.saveGameState(_state.value)
+            gameStateRepository.saveGameState(_state.value.asSavedGame())
         }
     }
 
@@ -618,7 +699,7 @@ class WordPlacementViewModel @Inject constructor(
 
     private fun clearGameState() {
         viewModelScope.launch(Dispatchers.IO) {
-            gameStateRepository.clearGameState()
+            gameStateRepository.clearGameState(gameModeId = 1, level = null)
             _state.update {
                 GameState(stonesInBag = initialStonesInBag)
             }

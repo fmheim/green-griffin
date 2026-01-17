@@ -7,9 +7,6 @@ import androidx.room.RoomDatabase
     entities = [
         DictionaryWord::class,
         GameStateEntity::class,
-        StoneInHandEntity::class,
-        StoneOnBoardEntity::class,
-        StoneInBagEntity::class
     ],
     version = 1,
     exportSchema = false

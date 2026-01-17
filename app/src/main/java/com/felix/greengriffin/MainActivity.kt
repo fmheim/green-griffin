@@ -17,13 +17,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import com.felix.greengriffin.board.presentation.GameMode
 import com.felix.greengriffin.board.presentation.GameMode.FreePlay
 import com.felix.greengriffin.board.presentation.GameState
@@ -40,7 +43,7 @@ import kotlinx.serialization.Serializable
 private data object RouteToHomeScreen : NavKey
 
 @Serializable
-private data class RouteToWordPlacementScreen(val gameMode: GameMode) : NavKey
+data class RouteToWordPlacementScreen(val gameMode: GameMode) : NavKey
 
 @Serializable
 private data object RouteToWordyTrails : NavKey
@@ -62,6 +65,10 @@ class MainActivity : ComponentActivity() {
                     NavDisplay(
                         backStack = backStack,
                         onBack = { backStack.removeLastOrNull() },
+                        entryDecorators = listOf(
+                            rememberSaveableStateHolderNavEntryDecorator(),
+                            rememberViewModelStoreNavEntryDecorator()
+                        ),
                         transitionSpec = {
                             slideInHorizontally(
                                 initialOffsetX = { it },
@@ -102,10 +109,13 @@ class MainActivity : ComponentActivity() {
                                     })
                             }
                             entry<RouteToWordPlacementScreen> {
-                                val viewModel: WordPlacementViewModel = hiltViewModel()
-                                val state by viewModel.state.collectAsStateWithLifecycle(
-                                    initialValue = GameState(gameMode = it.gameMode)
-                                )
+                                val viewModel: WordPlacementViewModel =
+                                    hiltViewModel<WordPlacementViewModel, WordPlacementViewModel.Factory>(
+                                        creationCallback = { factory ->
+                                            factory.create(navKey = it)
+                                        }
+                                    )
+                                val state by viewModel.state.collectAsStateWithLifecycle()
                                 WordPlacementScreen(
                                     modifier = Modifier
                                         .windowInsetsPadding(WindowInsets.systemBars)
@@ -121,9 +131,9 @@ class MainActivity : ComponentActivity() {
                                         backStack.add(
                                             RouteToWordPlacementScreen(
                                                 gameMode = GameMode.Trails(
-                                                    level = trailLevels.firstOrNull { it.level == level }
+                                                    level = trailLevels.firstOrNull { it.index == level }
                                                         ?: TrailLevel(
-                                                            level = 0,
+                                                            index = 0,
                                                             boardSize = 10,
                                                             startFields = setOf(),
                                                             goalFields = setOf(),

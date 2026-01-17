@@ -52,7 +52,8 @@ android {
                     "-opt-in=com.google.accompanist.permissions.ExperimentalPermissionsApi",
                     "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
                     "-opt-in=kotlinx.coroutines.FlowPreview",
-                    "-opt-in=kotlin.contracts.ExperimentalContracts"
+                    "-opt-in=kotlin.contracts.ExperimentalContracts",
+                    "-opt-in=kotlin.time.ExperimentalTime"
                 )
             )
             jvmTarget = JvmTarget.fromTarget("17")
@@ -92,6 +93,7 @@ dependencies {
     // Navigation3
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.navigation3.ui)
+    implementation(libs.androidx.lifecycle.viewmodel.navigation3)
 
 
     testImplementation(libs.junit)
