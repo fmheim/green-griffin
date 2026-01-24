@@ -22,7 +22,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -80,8 +82,10 @@ fun LevelBox(level: Int, completed: Boolean, onClick: () -> Unit) {
     )
     Box(
         modifier = Modifier
-            .clickable(onClick = onClick)
             .size(120.dp)
+            .clip(shape)
+            .clickable(onClick = onClick)
+            .scale(0.95f)
             .background(
                 if (completed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
                 shape = shape,
@@ -90,7 +94,8 @@ fun LevelBox(level: Int, completed: Boolean, onClick: () -> Unit) {
                 width = 3.dp,
                 shape = shape,
                 color = if (completed) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.primary
-            ),
+            )
+            ,
         contentAlignment = Alignment.Center
     ) {
         Text(
