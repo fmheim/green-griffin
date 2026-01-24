@@ -4,6 +4,7 @@ package com.felix.greengriffin.board.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.felix.greengriffin.RouteToWordPlacementScreen
+import com.felix.greengriffin.board.data.repository.CompletedLevelsRepository
 import com.felix.greengriffin.board.data.repository.GameStateRepository
 import com.felix.greengriffin.board.domain.usecase.AreWordsValidUseCase
 import com.felix.greengriffin.board.domain.usecase.GameModeViolation.FirstWordNotOnCorrectStartPosition
@@ -13,6 +14,7 @@ import com.felix.greengriffin.board.domain.usecase.WordValidation.Valid
 import com.felix.greengriffin.board.presentation.GameState.JokerCoordinates
 import com.felix.greengriffin.board.presentation.components.StoneData
 import com.felix.greengriffin.board.presentation.components.StoneInHand
+import com.felix.greengriffin.trails.domain.usecase.CompleteTrailLevelIfGoalReachedUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -28,9 +30,11 @@ import java.util.UUID
 
 @HiltViewModel(assistedFactory = WordPlacementViewModel.Factory::class)
 class WordPlacementViewModel @AssistedInject constructor(
-    private val areWordsValidUseCase: AreWordsValidUseCase,
-    private val isPlacementValidUseCase: IsPlacementValidUseCase,
+    private val areWordsValid: AreWordsValidUseCase,
+    private val isPlacementValid: IsPlacementValidUseCase,
+    private val completeTrailLevelIfGoalReached: CompleteTrailLevelIfGoalReachedUseCase,
     private val gameStateRepository: GameStateRepository,
+    private val completedLevelsRepository: CompletedLevelsRepository,
     @Assisted val navKey: RouteToWordPlacementScreen,
 ) : ViewModel() {
 
@@ -45,16 +49,17 @@ class WordPlacementViewModel @AssistedInject constructor(
 
 
     init {
-        loadInitialGameState()
+        viewModelScope.launch {
+            loadInitialGameState()
+            observeLevelCompletion()
+        }
     }
 
-    private fun loadInitialGameState() {
-        viewModelScope.launch {
-            val savedState = loadSavedState()
-            when {
-                savedState != null -> _state.update { savedState }
-                else -> initializeNewGame()
-            }
+    private suspend fun loadInitialGameState() {
+        val savedState = loadSavedState()
+        when {
+            savedState != null -> _state.update { savedState }
+            else -> initializeNewGame()
         }
     }
 
@@ -76,6 +81,19 @@ class WordPlacementViewModel @AssistedInject constructor(
         }
         if (_state.value.isAbleToDrawStones) {
             drawStones()
+        }
+    }
+
+    private suspend fun observeLevelCompletion() {
+        when (val gameMode = _state.value.gameMode) {
+            is GameMode.Trails -> completedLevelsRepository.observeIfLevelIsCompleted(
+                gameModeId = gameMode.id,
+                levelIndex = gameMode.level.index
+            ).collect { isCompleted ->
+                _state.update { it.copy(isCurrentLevelCompleted = isCompleted) }
+            }
+
+            else -> Unit
         }
     }
 
@@ -147,6 +165,21 @@ class WordPlacementViewModel @AssistedInject constructor(
         saveGameState()
     }
 
+    private fun maybeCompleteLevel() {
+        when (val gameMode = _state.value.gameMode) {
+            GameMode.FreePlay -> Unit
+            is GameMode.Trails -> {
+                viewModelScope.launch {
+                    val stonesOnBoard = _state.value.stonesOnBoard
+                    val level = gameMode.level
+                    completeTrailLevelIfGoalReached(
+                        stonesOnBoard = stonesOnBoard,
+                        level = level,
+                    )
+                }
+            }
+        }
+    }
 
     private fun moveStoneToBoard(
         stoneData: StoneData,
@@ -182,7 +215,7 @@ class WordPlacementViewModel @AssistedInject constructor(
     }
 
     private fun onStoneMovedToBoard() {
-        val placementValidation = isPlacementValidUseCase(
+        val placementValidation = isPlacementValid(
             stonesOnBoard = _state.value.stonesOnBoard,
             gameMode = _state.value.gameMode,
         )
@@ -237,6 +270,7 @@ class WordPlacementViewModel @AssistedInject constructor(
         _state.update { it.lockInWord() }
         saveGameState()
         drawStones()
+        maybeCompleteLevel()
     }
 
     private fun validateWords(words: List<String>) {
@@ -244,7 +278,7 @@ class WordPlacementViewModel @AssistedInject constructor(
         saveGameState()
 
         viewModelScope.launch(Dispatchers.IO) {
-            val wordValidation = areWordsValidUseCase(
+            val wordValidation = areWordsValid(
                 words = words,
                 allowedLanguages = listOf("sv", "de") // todo: specify languages from settings
             )

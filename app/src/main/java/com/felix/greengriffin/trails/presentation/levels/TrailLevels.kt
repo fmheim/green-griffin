@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -30,7 +32,9 @@ import kotlin.random.nextInt
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun TrailLevelsScreen(onBack: () -> Unit, onLevelClick: (level: Int) -> Unit) {
+fun TrailLevelsScreen(
+    state: TrailLevelsState,
+    onBack: () -> Unit, onLevelClick: (level: Int) -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -48,21 +52,21 @@ fun TrailLevelsScreen(onBack: () -> Unit, onLevelClick: (level: Int) -> Unit) {
     ) { padding ->
         FlowRow(
             modifier = Modifier
+                .verticalScroll(state = rememberScrollState())
                 .padding(padding)
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            for (i in 1..100) {
+            (1..state.levelsCount).forEach { levelIndex ->
                 LevelBox(
-                    level = i,
-                    completed = i < 5,
-                    onClick = { onLevelClick(i) }
+                    level = levelIndex,
+                    completed = levelIndex in state.completedLevels,
+                    onClick = { onLevelClick(levelIndex) }
                 )
             }
         }
     }
-
 }
 
 @Composable
@@ -103,6 +107,7 @@ fun LevelBox(level: Int, completed: Boolean, onClick: () -> Unit) {
 fun TrailLevelsScreenPreview() {
     TrailLevelsScreen(
         onBack = { },
+        state = TrailLevelsState(levelsCount = 20, completedLevels = setOf(1, 2, 3)),
         onLevelClick = { }
     )
 }

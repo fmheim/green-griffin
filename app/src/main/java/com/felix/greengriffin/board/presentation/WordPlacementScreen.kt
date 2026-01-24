@@ -116,6 +116,9 @@ fun WordPlacementScreen(
                     modifier = Modifier.size(16.dp)
                 )
             }
+            if(state.isCurrentLevelCompleted){
+                Text(text = "Level completed!", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+            }
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {

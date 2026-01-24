@@ -99,6 +99,7 @@ private fun Set<Field>.contains(row: Int, column: Int) =
 @Immutable
 data class GameState(
     val gameMode: GameMode = GameMode.FreePlay,
+    val isCurrentLevelCompleted: Boolean = false,
     val stonesInHand: List<StoneInHand> = emptyList(),
     val stonesOnBoard: Set<StoneOnBoard> = emptySet(),
     val stonesInBag: Set<StoneInBag> = emptySet(),

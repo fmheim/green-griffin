@@ -34,6 +34,7 @@ import com.felix.greengriffin.board.presentation.WordPlacementViewModel
 import com.felix.greengriffin.board.presentation.trailLevels
 import com.felix.greengriffin.core.presentation.theme.GreenGriffinTheme
 import com.felix.greengriffin.trails.presentation.levels.TrailLevelsScreen
+import com.felix.greengriffin.trails.presentation.levels.TrailLevelsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.serialization.Serializable
 
@@ -125,7 +126,10 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             entry<RouteToWordyTrails> {
+                                val viewModel = hiltViewModel<TrailLevelsViewModel>()
+                                val state by viewModel.state.collectAsStateWithLifecycle()
                                 TrailLevelsScreen(
+                                    state = state,
                                     onBack = { backStack.removeLastOrNull() },
                                     onLevelClick = { level ->
                                         backStack.add(

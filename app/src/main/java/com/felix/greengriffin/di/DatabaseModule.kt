@@ -3,6 +3,7 @@ package com.felix.greengriffin.di
 import android.content.Context
 import androidx.room.Room
 import com.felix.greengriffin.board.data.local.AppDatabase
+import com.felix.greengriffin.board.data.local.CompletedLevelsDao
 import com.felix.greengriffin.board.data.local.DictionaryDao
 import com.felix.greengriffin.board.data.local.GameStateDao
 import dagger.Module
@@ -38,4 +39,11 @@ object DatabaseModule {
     fun provideGameStateDao(appDatabase: AppDatabase): GameStateDao {
         return appDatabase.gameStateDao()
     }
+
+    @Provides
+    fun provideCompletedLevelsDao(appDatabase: AppDatabase): CompletedLevelsDao {
+        return appDatabase.completedLevelsDao()
+    }
+
+
 }

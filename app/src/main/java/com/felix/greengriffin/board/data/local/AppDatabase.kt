@@ -7,6 +7,7 @@ import androidx.room.RoomDatabase
     entities = [
         DictionaryWord::class,
         GameStateEntity::class,
+        CompletedLevelEntity::class,
     ],
     version = 1,
     exportSchema = false
@@ -14,4 +15,5 @@ import androidx.room.RoomDatabase
 abstract class AppDatabase : RoomDatabase() {
     abstract fun dictionaryDao(): DictionaryDao
     abstract fun gameStateDao(): GameStateDao
+    abstract fun completedLevelsDao(): CompletedLevelsDao
 }
