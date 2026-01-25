@@ -44,7 +44,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -55,6 +54,7 @@ import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
@@ -75,8 +75,11 @@ import com.felix.greengriffin.board.presentation.components.StoneInHand
 import com.felix.greengriffin.board.presentation.components.StoneOnBoard
 import com.felix.greengriffin.board.presentation.components.StoneSelector
 import com.felix.greengriffin.board.presentation.components.StonesRow
+import com.felix.greengriffin.core.presentation.drawing.drawGrass
+import com.felix.greengriffin.core.presentation.drawing.drawWater
 import com.felix.greengriffin.core.presentation.icons.Delete
 import com.felix.greengriffin.core.presentation.theme.GreenGriffinTheme
+
 import com.felix.greengriffin.util.extensions.compose.animatedGradientBrush
 
 
@@ -116,8 +119,12 @@ fun WordPlacementScreen(
                     modifier = Modifier.size(16.dp)
                 )
             }
-            if(state.isCurrentLevelCompleted){
-                Text(text = "Level completed!", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+            if (state.isCurrentLevelCompleted) {
+                Text(
+                    text = "Level completed!",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 10.sp
+                )
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically
@@ -199,7 +206,7 @@ fun WordPlacementScreen(
             ),
             exit = slideOutVertically(targetOffsetY = { 2 * it })
         ) {
-            Box(modifier = Modifier.padding(16.dp)){
+            Box(modifier = Modifier.padding(16.dp)) {
                 Text(text = state.errorText.orEmpty(), color = MaterialTheme.colorScheme.error)
             }
         }
@@ -373,19 +380,46 @@ private fun BoxScope.BoardField(
                         if (state.gameMode.isStartField(
                                 column = columnIndex,
                                 row = rowIndex
-                            )){
-                            MaterialTheme.colorScheme.tertiary
+                            )
+                        ) {
+                            Color(0xFF122F12)
                         } else if (state.gameMode.isGoalField(
                                 column = columnIndex,
                                 row = rowIndex
-                            )){
-                            MaterialTheme.colorScheme.tertiary
-                        } else  {
+                            )
+                        ) {
+                            Color(0xFF122F12)
+                        } else {
                             Color.Transparent
                         }
                     }
 
                     FreePlay -> Color.Transparent
+                }
+            )
+            .then(
+                if (state.gameMode is Trails) {
+                    if (
+                        (state.gameMode.isStartField(
+                            column = columnIndex,
+                            row = rowIndex
+                        ) ||
+                                state.gameMode.isGoalField(
+                                    column = columnIndex,
+                                    row = rowIndex
+                                )
+                                )
+                    ) {
+                        Modifier.drawBehind {
+                            drawGrass()
+                        }
+                    } else {
+                        Modifier.drawBehind {
+                            drawWater()
+                        }
+                    }
+                } else {
+                    Modifier
                 }
             )
     )
