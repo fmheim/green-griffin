@@ -3,6 +3,7 @@
 package com.felix.greengriffin.board.presentation
 
 
+import android.R.attr.label
 import android.content.ClipDescription
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -11,8 +12,15 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.StartOffset
+import androidx.compose.animation.core.StartOffsetType
 import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -46,6 +54,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +64,8 @@ import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
@@ -81,6 +92,8 @@ import com.felix.greengriffin.core.presentation.icons.Delete
 import com.felix.greengriffin.core.presentation.theme.GreenGriffinTheme
 
 import com.felix.greengriffin.util.extensions.compose.animatedGradientBrush
+import com.google.ai.client.generativeai.type.content
+import kotlin.math.PI
 
 
 @OptIn(ExperimentalAnimationApi::class)
@@ -373,7 +386,14 @@ private fun BoxScope.BoardField(
     Box(
         modifier = Modifier
             .matchParentSize()
-            .border(width = 1.dp, color = MaterialTheme.colorScheme.outline)
+            .border(
+                width = 1.dp, color = MaterialTheme.colorScheme.outline.copy(
+                    alpha = when (state.gameMode is Trails) {
+                        true -> 0f
+                        else -> 0.2f
+                    }
+                )
+            )
             .background(
                 color = when (state.gameMode) {
                     is Trails -> {
@@ -414,8 +434,19 @@ private fun BoxScope.BoardField(
                             drawGrass()
                         }
                     } else {
+                        val infiniteTransition = rememberInfiniteTransition(label = "Wave")
+                        val wavePhase by infiniteTransition.animateFloat(
+                            initialValue = 0f,
+                            targetValue = 2f * PI.toFloat(),
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(durationMillis = 7000, easing = LinearEasing),
+                                repeatMode = RepeatMode.Restart,
+                                initialStartOffset = StartOffset(offsetType = StartOffsetType.FastForward, offsetMillis = rowIndex * columnIndex * 100)
+                            ),
+                            label = "WavePhase"
+                        )
                         Modifier.drawBehind {
-                            drawWater()
+                            drawWater(wavePhase)
                         }
                     }
                 } else {
