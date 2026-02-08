@@ -3,7 +3,6 @@
 package com.felix.greengriffin.board.presentation
 
 
-import android.R.attr.label
 import android.content.ClipDescription
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -27,6 +26,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -64,9 +65,9 @@ import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color.Companion.Transparent
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -74,10 +75,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import androidx.room.util.getColumnIndex
 import com.felix.greengriffin.R
 import com.felix.greengriffin.board.presentation.GameEvent.StoneDroppedOnBoard
-import com.felix.greengriffin.board.presentation.GameMode.FreePlay
 import com.felix.greengriffin.board.presentation.GameMode.Trails
 import com.felix.greengriffin.board.presentation.components.DraggableStone
 import com.felix.greengriffin.board.presentation.components.StoneData
@@ -86,13 +85,12 @@ import com.felix.greengriffin.board.presentation.components.StoneInHand
 import com.felix.greengriffin.board.presentation.components.StoneOnBoard
 import com.felix.greengriffin.board.presentation.components.StoneSelector
 import com.felix.greengriffin.board.presentation.components.StonesRow
+import com.felix.greengriffin.core.presentation.components.TiledBackground
 import com.felix.greengriffin.core.presentation.drawing.drawGrass
 import com.felix.greengriffin.core.presentation.drawing.drawWater
 import com.felix.greengriffin.core.presentation.icons.Delete
 import com.felix.greengriffin.core.presentation.theme.GreenGriffinTheme
-
 import com.felix.greengriffin.util.extensions.compose.animatedGradientBrush
-import com.google.ai.client.generativeai.type.content
 import kotlin.math.PI
 
 
@@ -106,7 +104,9 @@ fun WordPlacementScreen(
     AnimatedVisibility(state.isJokerSelectorVisible) {
         StoneSelector(
             onLetterSelected = { onEvent(GameEvent.JokerSelected(it)) },
-            onDismissRequest = { onEvent(GameEvent.JokerSelectorDismissRequested) }
+            onDismissRequest = { onEvent(GameEvent.JokerSelectorDismissRequested) },
+            backgroundImageRes = state.stoneBackgroundImageRes,
+            textImageRes = state.stoneTextImageRes,
         )
     }
     Column(modifier = modifier) {
@@ -124,7 +124,7 @@ fun WordPlacementScreen(
                     containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f),
                     contentColor = MaterialTheme.colorScheme.onErrorContainer
                 ),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                contentPadding = PaddingValues(0.dp)
             ) {
                 Icon(
                     imageVector = Delete,
@@ -190,6 +190,7 @@ fun WordPlacementScreen(
                         else -> 2.dp
                     },
                     color = when {
+                        state.gameMode is Trails -> Transparent
                         state.isAbleToSubmit -> MaterialTheme.colorScheme.outline // todo maybe animate border when able to send in
                         else -> MaterialTheme.colorScheme.outline
                     }
@@ -299,80 +300,121 @@ fun WordBoard(
     state: GameState,
 ) {
     val boardSize = state.boardSize
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(count = boardSize),
-        userScrollEnabled = false,
-        modifier = modifier
-            .height((LocalConfiguration.current.screenWidthDp - (2f * 8f)).dp)
-    ) {
-        items(boardSize * boardSize) { index ->
-            val columnIndex = remember(index, boardSize) {
-                getColumnIndex(
-                    gridIndex = index,
-                    totalColumns = boardSize
-                )
-            }
-            val rowIndex = remember(index, boardSize) {
-                getRowIndex(
-                    gridIndex = index,
-                    totalColumns = boardSize
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .zIndex(boardSize * boardSize - index.toFloat())
-                    .aspectRatio(1f)
-                    .background(color = if (state.enteredField == index) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.secondaryContainer)
-                    .dragAndDropTarget(
-                        shouldStartDragAndDrop = {
-                            state.isPositionOnBoardAvailable(
-                                columnIndex = columnIndex,
-                                rowIndex = rowIndex
-                            ) && it // check if position is taken
-                                .mimeTypes()
-                                .contains(ClipDescription.MIMETYPE_TEXT_PLAIN)
-                        },
-                        target = remember {
-                            object : DragAndDropTarget {
-                                override fun onDrop(event: DragAndDropEvent): Boolean {
-                                    val data = StoneData
-                                        .fromClipData(clipData = event.toAndroidDragEvent().clipData)
-                                        ?: return false
-                                    onEvent(
-                                        StoneDroppedOnBoard(
-                                            columnIndex = columnIndex,
-                                            rowIndex = rowIndex,
-                                            stoneData = data,
-                                        )
-                                    )
-                                    return true
-                                }
+    val height = (LocalConfiguration.current.screenWidthDp - (2f * 8f)).dp
+    val fieldWidth = height / boardSize.toFloat()
+    Box() {
+        val grass = painterResource(R.drawable.grass_shore)
+        TiledBackground(
+            modifier = Modifier
+                .width(height - fieldWidth)
+                .height(height)
+                .align(Alignment.TopCenter),
+            tileImageRes = R.drawable.water,
+            scale = 0.8f
+        )
+        Image(
+            painter = grass,
+            contentDescription = "Grass",
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .height(height)
+                .width(fieldWidth * 2),
+            contentScale = ContentScale.FillWidth
+        )
+        Image(
+            painter = grass,
+            contentDescription = "Grass",
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .rotate(180f)
+                .height(height)
+                .width(fieldWidth * 2),
+            contentScale = ContentScale.FillWidth
+        )
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(count = boardSize),
+            userScrollEnabled = false,
+            modifier = modifier
+                .height(height)
 
-                                override fun onEntered(event: DragAndDropEvent) {
-                                    super.onEntered(event)
-                                    onEvent(GameEvent.FieldEntered(index = index))
+        ) {
+            items(boardSize * boardSize) { index ->
+                val columnIndex = remember(index, boardSize) {
+                    getColumnIndex(
+                        gridIndex = index,
+                        totalColumns = boardSize
+                    )
+                }
+                val rowIndex = remember(index, boardSize) {
+                    getRowIndex(
+                        gridIndex = index,
+                        totalColumns = boardSize
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .zIndex(boardSize * boardSize - index.toFloat())
+                        .aspectRatio(1f)
+                        .background(
+                            color = when (state.enteredField) {
+                                index -> MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.3f)
+                                else if state.gameMode is Trails -> Transparent
+                                else -> MaterialTheme.colorScheme.secondaryContainer
+                            }
+                        )
+                        .dragAndDropTarget(
+                            shouldStartDragAndDrop = {
+                                state.isPositionOnBoardAvailable(
+                                    columnIndex = columnIndex,
+                                    rowIndex = rowIndex
+                                ) && it // check if position is taken
+                                    .mimeTypes()
+                                    .contains(ClipDescription.MIMETYPE_TEXT_PLAIN)
+                            },
+                            target = remember {
+                                object : DragAndDropTarget {
+                                    override fun onDrop(event: DragAndDropEvent): Boolean {
+                                        val data = StoneData
+                                            .fromClipData(clipData = event.toAndroidDragEvent().clipData)
+                                            ?: return false
+                                        onEvent(
+                                            StoneDroppedOnBoard(
+                                                columnIndex = columnIndex,
+                                                rowIndex = rowIndex,
+                                                stoneData = data,
+                                            )
+                                        )
+                                        return true
+                                    }
+
+                                    override fun onEntered(event: DragAndDropEvent) {
+                                        super.onEntered(event)
+                                        onEvent(GameEvent.FieldEntered(index = index))
+                                    }
                                 }
                             }
+                        ),
+                    content = {
+                        //BoardField(state, columnIndex, rowIndex)
+                        state.stonesOnBoard.find { stone ->
+                            stone.columnIndex == getColumnIndex(
+                                gridIndex = index,
+                                totalColumns = boardSize
+                            ) && stone.rowIndex == getRowIndex(
+                                gridIndex = index,
+                                totalColumns = boardSize
+                            )
+                        }?.let {
+                            DraggableStone(
+                                modifier = Modifier.fillMaxSize(),
+                                data = it,
+                                backgroundRes = state.stoneBackgroundImageRes,
+                                textImageRes = state.stoneTextImageRes,
+                            )
                         }
-                    ),
-                content = {
-                    BoardField(state, columnIndex, rowIndex)
-                    state.stonesOnBoard.find { stone ->
-                        stone.columnIndex == getColumnIndex(
-                            gridIndex = index,
-                            totalColumns = boardSize
-                        ) && stone.rowIndex == getRowIndex(
-                            gridIndex = index,
-                            totalColumns = boardSize
-                        )
-                    }?.let {
-                        DraggableStone(
-                            modifier = Modifier.fillMaxSize(),
-                            data = it
-                        )
                     }
-                }
-            )
+                )
+            }
         }
     }
 }
@@ -393,29 +435,6 @@ private fun BoxScope.BoardField(
                         else -> 0.2f
                     }
                 )
-            )
-            .background(
-                color = when (state.gameMode) {
-                    is Trails -> {
-                        if (state.gameMode.isStartField(
-                                column = columnIndex,
-                                row = rowIndex
-                            )
-                        ) {
-                            Color(0xFF122F12)
-                        } else if (state.gameMode.isGoalField(
-                                column = columnIndex,
-                                row = rowIndex
-                            )
-                        ) {
-                            Color(0xFF122F12)
-                        } else {
-                            Color.Transparent
-                        }
-                    }
-
-                    FreePlay -> Color.Transparent
-                }
             )
             .then(
                 if (state.gameMode is Trails) {
@@ -441,7 +460,10 @@ private fun BoxScope.BoardField(
                             animationSpec = infiniteRepeatable(
                                 animation = tween(durationMillis = 7000, easing = LinearEasing),
                                 repeatMode = RepeatMode.Restart,
-                                initialStartOffset = StartOffset(offsetType = StartOffsetType.FastForward, offsetMillis = rowIndex * columnIndex * 100)
+                                initialStartOffset = StartOffset(
+                                    offsetType = StartOffsetType.FastForward,
+                                    offsetMillis = rowIndex * columnIndex * 100
+                                )
                             ),
                             label = "WavePhase"
                         )
@@ -471,6 +493,7 @@ fun getRowIndex(gridIndex: Int, totalColumns: Int) = gridIndex / totalColumns
 val previewGameState = GameState(
     isCurrentWordValid = true,
     isValidPlacement = true,
+    gameMode = Trails(level = trailLevels.first()),
     totalPoints = 42,
     stonesInHand = listOf(
         StoneInHand(letter = 'A', value = 1, id = "stone1", userId = 1),

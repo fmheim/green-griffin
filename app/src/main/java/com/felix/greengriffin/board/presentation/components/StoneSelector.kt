@@ -1,11 +1,13 @@
 package com.felix.greengriffin.board.presentation.components
 
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -33,6 +35,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.window.DialogProperties
+import com.felix.greengriffin.R
 import com.felix.greengriffin.board.presentation.germanAlphabet
 import com.felix.greengriffin.core.presentation.theme.GreenGriffinTheme
 import java.util.UUID
@@ -43,6 +46,8 @@ fun StoneSelector(
     onLetterSelected: (Char) -> Unit,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
+    @DrawableRes backgroundImageRes: Int? = null,
+    @DrawableRes textImageRes: Int? = null,
     alphabet: List<Char> = germanAlphabet, // todo implement persistent list
 ) {
     val pagerState = rememberPagerState(pageCount = alphabet::size)
@@ -81,6 +86,7 @@ fun StoneSelector(
                             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Center) {
                                 DraggableStone(
                                     modifier = Modifier
+                                        .aspectRatio(1f)
                                         .graphicsLayer {
                                             val pageOffset = (
                                                     (pagerState.currentPage - page)
@@ -107,7 +113,9 @@ fun StoneSelector(
                                         letter = alphabet[page],
                                         value = 0,
                                         id = UUID.randomUUID().toString()
-                                    )
+                                    ),
+                                    backgroundRes = backgroundImageRes,
+                                    textImageRes = textImageRes,
                                 )
                             }
                         }
@@ -170,7 +178,9 @@ fun StoneSelectorPreview() = GreenGriffinTheme {
         StoneSelector(
             onLetterSelected = { showDialog.value = false },
             onDismissRequest = { showDialog.value = false },
-            alphabet = germanAlphabet
+            alphabet = germanAlphabet,
+            backgroundImageRes = R.drawable.stone,
+            textImageRes = R.drawable.pure_stone
         )
     }
 }

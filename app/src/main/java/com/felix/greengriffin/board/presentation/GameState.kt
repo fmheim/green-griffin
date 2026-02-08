@@ -1,6 +1,8 @@
 package com.felix.greengriffin.board.presentation
 
+import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Immutable
+import com.felix.greengriffin.R
 import com.felix.greengriffin.board.presentation.components.StoneData
 import com.felix.greengriffin.board.presentation.components.StoneInBag
 import com.felix.greengriffin.board.presentation.components.StoneInHand
@@ -12,18 +14,22 @@ import java.util.UUID
 
 const val DEFAULT_BOARD_SIZE = 10
 
+@Serializable
 data class Field(
     val row: Int,
     val column: Int,
 )
 
+@Serializable
 data class TrailLevel(
     val index: Int,
     val boardSize: Int,
     val startFields: Set<Field>,
     val goalFields: Set<Field>,
     val blockedField: Set<Field>,
-)
+    @DrawableRes val backgroundRes: Int? = null,
+    @DrawableRes val textImageRes: Int? = null,
+    )
 
 val trailLevels = setOf(
     TrailLevel(
@@ -31,33 +37,42 @@ val trailLevels = setOf(
         boardSize = 10,
         startFields = List(10) { Field(row = it, column = 0) }.toSet(),
         goalFields = List(10) { Field(row = it, column = 9) }.toSet(),
-        blockedField = setOf()
+        blockedField = setOf(),
+        backgroundRes = R.drawable.stone,
+        textImageRes = R.drawable.pure_stone,
     ),
     TrailLevel(
         index = 2,
         boardSize = 10,
         startFields = List(10) { Field(row = 0, column = it) }.toSet(),
         goalFields = List(10) { Field(row = 9, column = it) }.toSet(),
-        blockedField = setOf()
+        blockedField = setOf(),
+        backgroundRes = R.drawable.stone,
+        textImageRes = R.drawable.pure_stone,
     ),
     TrailLevel(
         index = 3,
         boardSize = 10,
         startFields = List(6) { Field(row = it, column = 0) }.toSet(),
         goalFields = List(6) { Field(row = it + 5, column = 9) }.toSet(),
-        blockedField = setOf()
+        blockedField = setOf(),
+        backgroundRes = R.drawable.stone,
+        textImageRes = R.drawable.pure_stone,
     ),
 
 )
 
+@Serializable
 sealed interface GameMode {
     val id: Int
 
+    @Serializable
     data object FreePlay : GameMode {
         override val id: Int
             get() = FREE_PLAY_ID
     }
 
+    @Serializable
     data class Trails(val level: TrailLevel) : GameMode {
 
         override val id: Int
@@ -245,6 +260,15 @@ data class GameState(
 
     val hasError: Boolean
         get() = errorText != null
+
+    val stoneBackgroundImageRes: Int? get() = when(gameMode){
+        is GameMode.Trails -> gameMode.level.backgroundRes
+        is GameMode.FreePlay -> null
+    }
+    val stoneTextImageRes: Int? get() = when(gameMode){
+        is GameMode.Trails -> gameMode.level.textImageRes
+        is GameMode.FreePlay -> null
+    }
 
     private fun getWordsFromHorizontalPlacement(): List<Word> {
         val createdWords = mutableListOf<Word>()

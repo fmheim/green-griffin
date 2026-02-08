@@ -1,6 +1,10 @@
 package com.felix.greengriffin.board.presentation.components
 
+import android.R.attr.fontWeight
+import android.R.attr.maxLines
 import android.content.ClipData
+import androidx.annotation.DrawableRes
+import androidx.compose.animation.core.copy
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.draganddrop.dragAndDropSource
@@ -13,22 +17,48 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.BlurEffect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Color.Companion.Transparent
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.ImageShader
+import androidx.compose.ui.graphics.Matrix
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.RenderEffect
+import androidx.compose.ui.graphics.Shader
+import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.felix.greengriffin.R
 import com.felix.greengriffin.board.presentation.Field
+import com.felix.greengriffin.core.presentation.theme.GreenGriffinTheme
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -75,15 +105,6 @@ data class StoneInBag(
         id = id,
         userId = userId,
     )
-
-    fun toStoneOnBoard(rowIndex: Int, columnIndex: Int) = StoneOnBoard(
-        letter = letter,
-        value = value,
-        id = id,
-        rowIndex = rowIndex,
-        columnIndex = columnIndex,
-        isLocked = false
-    )
 }
 
 @Serializable
@@ -93,12 +114,6 @@ data class StoneInHand(
     override val id: String,
     val userId: Int,
 ) : StoneData() {
-
-    fun toStoneInBag() = StoneInBag(
-        letter = letter,
-        value = value,
-        id = id
-    )
 
     fun toStoneOnBoard(rowIndex: Int, columnIndex: Int) = StoneOnBoard(
         letter = letter,
@@ -150,11 +165,12 @@ fun DraggableStone(
     data: StoneData,
     modifier: Modifier = Modifier,
     width: Dp? = null,
+    @DrawableRes backgroundRes: Int? = null,
+    @DrawableRes textImageRes: Int? = null,
 ) {
-    var scaledFontSize by remember { mutableStateOf(45.sp) }
-    var isTextReady by remember { mutableStateOf(false) }
 
     Box {
+        val resources = LocalResources.current
         Box(
             modifier = modifier
                 .then(other = if (width != null) Modifier.size(width) else Modifier)
@@ -169,37 +185,103 @@ fun DraggableStone(
                             )
                         })
                 })
-                .background(
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = RoundedCornerShape(4.dp)
-                )
-                .border(
-                    width = 2.dp,
-                    color = MaterialTheme.colorScheme.outline,
-                    shape = RoundedCornerShape(4.dp)
-                )
-        ) {
-            Text(
-                modifier = Modifier
-                    .padding(4.dp)
-                    .drawWithContent {
-                        if (isTextReady) {
-                            drawContent()
-                        }
-                    },
-                text = " " + data.letter.toString() + " ",
-                color = MaterialTheme.colorScheme.onPrimary,
-                maxLines = 1,
-                lineHeight = scaledFontSize,
-                onTextLayout = {
-                    if (it.hasVisualOverflow) {
-                        scaledFontSize *= 0.9f
+                .then(
+                    if (backgroundRes == null) {
+                        Modifier
+                            .background(
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = RoundedCornerShape(4.dp)
+                            )
+                            .border(
+                                width = 2.dp,
+                                color = MaterialTheme.colorScheme.outline,
+                                shape = RoundedCornerShape(4.dp)
+                            )
                     } else {
-                        isTextReady = true
+                        Modifier.drawBehind {
+                            drawImage(
+                                image = ImageBitmap.imageResource(
+                                    res = resources,
+                                    id = backgroundRes
+                                ),
+                                dstSize = IntSize(
+                                    this.size.width.toInt(),
+                                    this.size.height.toInt()
+                                )
+                            )
+                        }
                     }
-                },
-                fontSize = scaledFontSize,
-            )
+                )
+
+        ) {
+
+            val bitmap = textImageRes?.let {
+                ImageBitmap.imageResource(textImageRes)
+            }
+
+            val brush = bitmap?.let {
+                remember(textImageRes) {
+                    ShaderBrush(
+                        ImageShader(
+                            image = bitmap,
+                            tileModeX = TileMode.Mirror,
+                            tileModeY = TileMode.Mirror,
+                        )
+                    )
+                }
+            }
+
+            Box {
+                val text = " " + data.letter.toString() + " "
+                val baseTextStyle = TextStyle(
+                    fontWeight = FontWeight.W900,
+                    textAlign = TextAlign.Center
+                )
+
+                Text(
+                    text = text,
+                    modifier = Modifier
+                        .padding(4.dp),
+                    color = Color.Black.copy(alpha = 0.7f),
+                    style = baseTextStyle.copy(
+                        drawStyle = Stroke(
+                            width = 4f,
+                            join = StrokeJoin.Round,
+                            pathEffect = PathEffect.cornerPathEffect(radius = 15f)
+                        ),
+                        shadow = Shadow(color = Color.Black, blurRadius = 10f),
+                    ),
+                    autoSize = TextAutoSize.StepBased()
+                )
+                Text(
+                    modifier = Modifier
+                        .padding(4.dp),
+                    text = text,
+                    style = baseTextStyle.copy(
+                        brush = brush,
+                    ),
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    maxLines = 1,
+                    autoSize = TextAutoSize.StepBased()
+                )
+                Text(
+                    text = text,
+                    modifier = Modifier
+                        .padding(4.dp),
+                    color = Color.Black.copy(alpha = 0.7f),
+                    style = baseTextStyle.copy(
+                        drawStyle = Stroke(
+                            width = 4f,
+                            join = StrokeJoin.Round,
+                            pathEffect = PathEffect.cornerPathEffect(radius = 15f)
+                        ),
+                    ),
+                    autoSize = TextAutoSize.StepBased()
+                )
+
+
+            }
+
         }
         data.value.takeIf { it > 0 }?.let {
             ValueBadge(it.toString())
@@ -226,6 +308,23 @@ private fun BoxScope.ValueBadge(value: String) {
             textAlign = TextAlign.Center,
             fontSize = 8.sp,
             lineHeight = 10.sp
+        )
+    }
+}
+
+@Preview
+@Composable
+fun DraggableStonePreview() {
+    GreenGriffinTheme {
+        DraggableStone(
+            data = StoneInHand(
+                letter = 'A',
+                value = 1,
+                id = "1",
+                userId = 0
+            ),
+            backgroundRes = R.drawable.stone,
+            textImageRes = R.drawable.pure_stone
         )
     }
 }
