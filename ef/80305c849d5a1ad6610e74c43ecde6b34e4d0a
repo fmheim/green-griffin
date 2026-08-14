@@ -1,0 +1,24 @@
+gradle/wrapper/gradle-wrapper.properties
+  h_205603024ee135 4
+gradle/libs.versions.toml
+  h_205603024ee135 2-4,8-11,14-18,20
+settings.gradle.kts
+  h_205603024ee135 15
+app/build.gradle.kts
+  h_205603024ee135 15
+.idea/compiler.xml
+  h_205603024ee135 4
+.idea/misc.xml
+  h_205603024ee135 1,8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "ef80305c849d5a1ad6610e74c43ecde6b34e4d0a",
+  "prompts": {},
+  "humans": {
+    "h_205603024ee135": {
+      "author": "Felix Heim <felix.heim@tradera.com>"
+    }
+  }
+}
