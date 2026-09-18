@@ -301,12 +301,7 @@ fun WordBoard(
                 modifier = Modifier
                     .zIndex(boardSize * boardSize - index.toFloat())
                     .aspectRatio(1f)
-                    .background(
-                        color = when (state.enteredField) {
-                            index -> MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.3f)
-                            else -> MaterialTheme.colorScheme.secondaryContainer
-                        }
-                    )
+                    .background(color = MaterialTheme.colorScheme.secondaryContainer)
                     .dragAndDropTarget(
                         shouldStartDragAndDrop = {
                             state.isPositionOnBoardAvailable(
@@ -343,7 +338,8 @@ fun WordBoard(
                     BoardField(
                         state = state,
                         columnIndex = columnIndex,
-                        rowIndex = rowIndex
+                        rowIndex = rowIndex,
+                        isHovered = state.enteredField == index
                     )
                     state.stonesOnBoard.find { stone ->
                         stone.columnIndex == getColumnIndex(
@@ -370,11 +366,13 @@ private fun BoxScope.BoardField(
     state: GameState,
     columnIndex: Int,
     rowIndex: Int,
+    isHovered: Boolean,
 ) {
     Box(
         modifier = Modifier
             .matchParentSize()
-            .border(width = 1.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+            // Painted bottom to top: the field fill, the drag-hover tint above it
+            // and the grid line last, so none of them hides the previous one.
             .background(
                 color = when (state.gameMode) {
                     is Trails -> when {
@@ -388,6 +386,13 @@ private fun BoxScope.BoardField(
                     GameMode.FreePlay -> Transparent
                 }
             )
+            .background(
+                color = when {
+                    isHovered -> MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.3f)
+                    else -> Transparent
+                }
+            )
+            .border(width = 1.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
     )
 }
 
