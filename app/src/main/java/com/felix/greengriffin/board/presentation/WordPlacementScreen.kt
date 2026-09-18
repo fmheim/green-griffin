@@ -11,22 +11,14 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.StartOffset
-import androidx.compose.animation.core.StartOffsetType
 import androidx.compose.animation.core.VisibilityThreshold
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -55,7 +47,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,10 +55,7 @@ import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color.Companion.Transparent
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -85,13 +73,9 @@ import com.felix.greengriffin.board.presentation.components.StoneInHand
 import com.felix.greengriffin.board.presentation.components.StoneOnBoard
 import com.felix.greengriffin.board.presentation.components.StoneSelector
 import com.felix.greengriffin.board.presentation.components.StonesRow
-import com.felix.greengriffin.core.presentation.components.TiledBackground
-import com.felix.greengriffin.core.presentation.drawing.drawGrass
-import com.felix.greengriffin.core.presentation.drawing.drawWater
 import com.felix.greengriffin.core.presentation.icons.Delete
 import com.felix.greengriffin.core.presentation.theme.GreenGriffinTheme
 import com.felix.greengriffin.util.extensions.compose.animatedGradientBrush
-import kotlin.math.PI
 
 
 @OptIn(ExperimentalAnimationApi::class)
@@ -189,11 +173,7 @@ fun WordPlacementScreen(
                         state.isAbleToSubmit -> 5.dp
                         else -> 2.dp
                     },
-                    color = when {
-                        state.gameMode is Trails -> Transparent
-                        state.isAbleToSubmit -> MaterialTheme.colorScheme.outline // todo maybe animate border when able to send in
-                        else -> MaterialTheme.colorScheme.outline
-                    }
+                    color = MaterialTheme.colorScheme.outline // todo maybe animate border when able to send in
                 ),
             state = state,
             onEvent = onEvent
@@ -301,120 +281,90 @@ fun WordBoard(
 ) {
     val boardSize = state.boardSize
     val height = (LocalConfiguration.current.screenWidthDp - (2f * 8f)).dp
-    val fieldWidth = height / boardSize.toFloat()
-    Box() {
-        val grass = painterResource(R.drawable.grass_shore)
-        TiledBackground(
-            modifier = Modifier
-                .width(height - fieldWidth)
-                .height(height)
-                .align(Alignment.TopCenter),
-            tileImageRes = R.drawable.water,
-            scale = 0.8f
-        )
-        Image(
-            painter = grass,
-            contentDescription = "Grass",
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .height(height)
-                .width(fieldWidth * 2),
-            contentScale = ContentScale.FillWidth
-        )
-        Image(
-            painter = grass,
-            contentDescription = "Grass",
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .rotate(180f)
-                .height(height)
-                .width(fieldWidth * 2),
-            contentScale = ContentScale.FillWidth
-        )
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(count = boardSize),
-            userScrollEnabled = false,
-            modifier = modifier
-                .height(height)
-
-        ) {
-            items(boardSize * boardSize) { index ->
-                val columnIndex = remember(index, boardSize) {
-                    getColumnIndex(
-                        gridIndex = index,
-                        totalColumns = boardSize
-                    )
-                }
-                val rowIndex = remember(index, boardSize) {
-                    getRowIndex(
-                        gridIndex = index,
-                        totalColumns = boardSize
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .zIndex(boardSize * boardSize - index.toFloat())
-                        .aspectRatio(1f)
-                        .background(
-                            color = when (state.enteredField) {
-                                index -> MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.3f)
-                                else if state.gameMode is Trails -> Transparent
-                                else -> MaterialTheme.colorScheme.secondaryContainer
-                            }
-                        )
-                        .dragAndDropTarget(
-                            shouldStartDragAndDrop = {
-                                state.isPositionOnBoardAvailable(
-                                    columnIndex = columnIndex,
-                                    rowIndex = rowIndex
-                                ) && it // check if position is taken
-                                    .mimeTypes()
-                                    .contains(ClipDescription.MIMETYPE_TEXT_PLAIN)
-                            },
-                            target = remember {
-                                object : DragAndDropTarget {
-                                    override fun onDrop(event: DragAndDropEvent): Boolean {
-                                        val data = StoneData
-                                            .fromClipData(clipData = event.toAndroidDragEvent().clipData)
-                                            ?: return false
-                                        onEvent(
-                                            StoneDroppedOnBoard(
-                                                columnIndex = columnIndex,
-                                                rowIndex = rowIndex,
-                                                stoneData = data,
-                                            )
-                                        )
-                                        return true
-                                    }
-
-                                    override fun onEntered(event: DragAndDropEvent) {
-                                        super.onEntered(event)
-                                        onEvent(GameEvent.FieldEntered(index = index))
-                                    }
-                                }
-                            }
-                        ),
-                    content = {
-                        //BoardField(state, columnIndex, rowIndex)
-                        state.stonesOnBoard.find { stone ->
-                            stone.columnIndex == getColumnIndex(
-                                gridIndex = index,
-                                totalColumns = boardSize
-                            ) && stone.rowIndex == getRowIndex(
-                                gridIndex = index,
-                                totalColumns = boardSize
-                            )
-                        }?.let {
-                            DraggableStone(
-                                modifier = Modifier.fillMaxSize(),
-                                data = it,
-                                backgroundRes = state.stoneBackgroundImageRes,
-                                textImageRes = state.stoneTextImageRes,
-                            )
-                        }
-                    }
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(count = boardSize),
+        userScrollEnabled = false,
+        modifier = modifier.height(height)
+    ) {
+        items(boardSize * boardSize) { index ->
+            val columnIndex = remember(index, boardSize) {
+                getColumnIndex(
+                    gridIndex = index,
+                    totalColumns = boardSize
                 )
             }
+            val rowIndex = remember(index, boardSize) {
+                getRowIndex(
+                    gridIndex = index,
+                    totalColumns = boardSize
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .zIndex(boardSize * boardSize - index.toFloat())
+                    .aspectRatio(1f)
+                    .background(
+                        color = when (state.enteredField) {
+                            index -> MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.3f)
+                            else -> MaterialTheme.colorScheme.secondaryContainer
+                        }
+                    )
+                    .dragAndDropTarget(
+                        shouldStartDragAndDrop = {
+                            state.isPositionOnBoardAvailable(
+                                columnIndex = columnIndex,
+                                rowIndex = rowIndex
+                            ) && it // check if position is taken
+                                .mimeTypes()
+                                .contains(ClipDescription.MIMETYPE_TEXT_PLAIN)
+                        },
+                        target = remember {
+                            object : DragAndDropTarget {
+                                override fun onDrop(event: DragAndDropEvent): Boolean {
+                                    val data = StoneData
+                                        .fromClipData(clipData = event.toAndroidDragEvent().clipData)
+                                        ?: return false
+                                    onEvent(
+                                        StoneDroppedOnBoard(
+                                            columnIndex = columnIndex,
+                                            rowIndex = rowIndex,
+                                            stoneData = data,
+                                        )
+                                    )
+                                    return true
+                                }
+
+                                override fun onEntered(event: DragAndDropEvent) {
+                                    super.onEntered(event)
+                                    onEvent(GameEvent.FieldEntered(index = index))
+                                }
+                            }
+                        }
+                    ),
+                content = {
+                    BoardField(
+                        state = state,
+                        columnIndex = columnIndex,
+                        rowIndex = rowIndex
+                    )
+                    state.stonesOnBoard.find { stone ->
+                        stone.columnIndex == getColumnIndex(
+                            gridIndex = index,
+                            totalColumns = boardSize
+                        ) && stone.rowIndex == getRowIndex(
+                            gridIndex = index,
+                            totalColumns = boardSize
+                        )
+                    }?.let {
+                        DraggableStone(
+                            modifier = Modifier.fillMaxSize(),
+                            data = it,
+                            backgroundRes = state.stoneBackgroundImageRes,
+                            textImageRes = state.stoneTextImageRes,
+                        )
+                    }
+                }
+            )
         }
     }
 }
@@ -428,51 +378,18 @@ private fun BoxScope.BoardField(
     Box(
         modifier = Modifier
             .matchParentSize()
-            .border(
-                width = 1.dp, color = MaterialTheme.colorScheme.outline.copy(
-                    alpha = when (state.gameMode is Trails) {
-                        true -> 0f
-                        else -> 0.2f
+            .border(width = 1.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+            .background(
+                color = when (state.gameMode) {
+                    is Trails -> when {
+                        state.gameMode.isStartField(column = columnIndex, row = rowIndex) ||
+                                state.gameMode.isGoalField(column = columnIndex, row = rowIndex) ->
+                            MaterialTheme.colorScheme.tertiaryContainer
+
+                        else -> Transparent
                     }
-                )
-            )
-            .then(
-                if (state.gameMode is Trails) {
-                    if (
-                        (state.gameMode.isStartField(
-                            column = columnIndex,
-                            row = rowIndex
-                        ) ||
-                                state.gameMode.isGoalField(
-                                    column = columnIndex,
-                                    row = rowIndex
-                                )
-                                )
-                    ) {
-                        Modifier.drawBehind {
-                            drawGrass()
-                        }
-                    } else {
-                        val infiniteTransition = rememberInfiniteTransition(label = "Wave")
-                        val wavePhase by infiniteTransition.animateFloat(
-                            initialValue = 0f,
-                            targetValue = 2f * PI.toFloat(),
-                            animationSpec = infiniteRepeatable(
-                                animation = tween(durationMillis = 7000, easing = LinearEasing),
-                                repeatMode = RepeatMode.Restart,
-                                initialStartOffset = StartOffset(
-                                    offsetType = StartOffsetType.FastForward,
-                                    offsetMillis = rowIndex * columnIndex * 100
-                                )
-                            ),
-                            label = "WavePhase"
-                        )
-                        Modifier.drawBehind {
-                            drawWater(wavePhase)
-                        }
-                    }
-                } else {
-                    Modifier
+
+                    GameMode.FreePlay -> Transparent
                 }
             )
     )
