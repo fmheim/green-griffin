@@ -1,8 +1,5 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.android.libraries.mapsplatform.secrets.gradle.plugin)
     alias(libs.plugins.kotlin.serialization)
@@ -42,30 +39,27 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlin {
-        compilerOptions {
-            freeCompilerArgs.addAll(
-                listOf(
-                    "-Xwhen-guards",
-                    "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
-                    "-opt-in=androidx.compose.foundation.layout.ExperimentalLayoutApi",
-                    "-opt-in=androidx.compose.material.ExperimentalMaterialApi",
-                    "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
-                    "-opt-in=androidx.compose.ui.ExperimentalComposeUiApi",
-                    "-opt-in=androidx.compose.ui.test.ExperimentalTestApi",
-                    "-opt-in=com.google.accompanist.permissions.ExperimentalPermissionsApi",
-                    "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
-                    "-opt-in=kotlinx.coroutines.FlowPreview",
-                    "-opt-in=kotlin.contracts.ExperimentalContracts",
-                    "-opt-in=kotlin.time.ExperimentalTime"
-                )
-            )
-            jvmTarget = JvmTarget.fromTarget("17")
-        }
-    }
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+}
+
+// jvmTarget is inherited from android.compileOptions.targetCompatibility
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.addAll(
+            listOf(
+                "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
+                "-opt-in=androidx.compose.foundation.layout.ExperimentalLayoutApi",
+                "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
+                "-opt-in=androidx.compose.ui.ExperimentalComposeUiApi",
+                "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
+                "-opt-in=kotlinx.coroutines.FlowPreview",
+                "-opt-in=kotlin.contracts.ExperimentalContracts",
+                "-opt-in=kotlin.time.ExperimentalTime"
+            )
+        )
     }
 }
 
