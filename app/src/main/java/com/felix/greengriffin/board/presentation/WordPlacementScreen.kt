@@ -89,8 +89,6 @@ fun WordPlacementScreen(
         StoneSelector(
             onLetterSelected = { onEvent(GameEvent.JokerSelected(it)) },
             onDismissRequest = { onEvent(GameEvent.JokerSelectorDismissRequested) },
-            backgroundImageRes = state.stoneBackgroundImageRes,
-            textImageRes = state.stoneTextImageRes,
         )
     }
     Column(modifier = modifier) {
@@ -359,8 +357,6 @@ fun WordBoard(
                         DraggableStone(
                             modifier = Modifier.fillMaxSize(),
                             data = it,
-                            backgroundRes = state.stoneBackgroundImageRes,
-                            textImageRes = state.stoneTextImageRes,
                         )
                     }
                 }
