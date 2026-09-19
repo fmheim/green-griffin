@@ -21,6 +21,7 @@ Game modes (`board/presentation/GameState.kt` → `sealed interface GameMode`):
 - All versions live in `gradle/libs.versions.toml`; add dependencies there, never inline.
 - `local.properties` must contain `apiKey=...` (read by the secrets Gradle plugin into `BuildConfig.apiKey`). Never commit or print it.
 - Release builds are minified with R8 (`app/proguard-rules.pro`).
+- In Claude Code cloud sessions the Android SDK and `local.properties` are provisioned by `.claude/scripts/cloud-setup.sh` (the environment's setup script) and `.claude/hooks/session-start.sh`. The environment must use **Custom** network access including `dl.google.com`, or nothing Android resolves. See `docs/claude-cloud-environment.md`.
 
 ## Package layout
 
@@ -114,4 +115,4 @@ It is built with `fallbackToDestructiveMigration(dropAllTables = true)` and `exp
 - `.cursorrules` and `tools/*.py` are leftovers from a Cursor setup (Python venv, LLM/scraper scripts). Ignore them; they are not part of the Android build and their version notes are outdated.
 - `UiState.kt` at the package root is an unused leftover from the Gemini sample template.
 - The Compose opt-ins (`ExperimentalFoundationApi`, `ExperimentalMaterial3Api`, etc.) are enabled globally in `app/build.gradle.kts`; no `@OptIn` annotations needed.
-- Project-local skills live in `.claude/skills/` (android-cli, compose-ui, data-layer, testing, r8-analyzer, ...). They are generic Android/KMP guides — where they conflict with the conventions above, follow this file.
+- Project-local skills live in `.claude/skills/` (android-cli, compose-ui, data-layer, testing, r8-analyzer, ...). They are generic Android/KMP guides — where they conflict with the conventions above, follow this file. The exception is `/test-on-device`, which is project-specific: it installs the CI or local debug APK on a connected device and verifies or debugs changes there (logcat, pulled Room DB, temporary `GGDBG` logs).
