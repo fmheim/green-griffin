@@ -196,8 +196,6 @@ class WordPlacementViewModel @AssistedInject constructor(
         rowIndex: Int,
         columnIndex: Int,
     ) {
-        println("StoneDroppedOnBoard")
-
         if (stoneData.isJoker) {
             _state.update {
                 it.copy(
@@ -260,7 +258,6 @@ class WordPlacementViewModel @AssistedInject constructor(
     }
 
     private fun moveStoneToHand(stoneData: StoneData) {
-        println("StoneDroppedOnHand")
         _state.update { currentState ->
             currentState
                 .moveStoneToHand(stoneData)

@@ -1,6 +1,7 @@
 package com.felix.greengriffin.board.presentation.components
 
 import android.content.ClipData
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.draganddrop.dragAndDropSource
@@ -56,7 +57,7 @@ sealed class StoneData {
         fun fromClipData(clipData: ClipData): StoneData? = try {
             Json.decodeFromString<StoneData>(clipData.getItemAt(0).text.toString())
         } catch (e: Exception) {
-            println("Failed to parse stone data: $e")
+            Log.w("StoneData", "Failed to parse dragged stone", e)
             null
         }
     }
