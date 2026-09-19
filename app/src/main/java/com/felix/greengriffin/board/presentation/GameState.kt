@@ -56,10 +56,16 @@ val trailLevels = setOf(
 sealed interface GameMode {
     val id: Int
 
+    /** Identifies the saved game of this mode. Modes without levels use [NO_LEVEL]. */
+    val levelKey: Int
+
     @Serializable
     data object FreePlay : GameMode {
         override val id: Int
             get() = FREE_PLAY_ID
+
+        override val levelKey: Int
+            get() = NO_LEVEL
     }
 
     @Serializable
@@ -67,6 +73,9 @@ sealed interface GameMode {
 
         override val id: Int
             get() = TRAILS_ID
+
+        override val levelKey: Int
+            get() = level.index
 
         fun isStartField(row: Int, column: Int) =
             level.startFields.contains(row = row, column = column)
@@ -80,6 +89,9 @@ sealed interface GameMode {
     companion object {
         const val FREE_PLAY_ID = 1
         const val TRAILS_ID = 2
+
+        /** Level key of a game mode that has no levels. Persisted, so it must not change. */
+        const val NO_LEVEL = -1
         fun fromId(
             id: Int,
             trailLevel: TrailLevel? = null,
@@ -435,7 +447,7 @@ data class GameState(
 
     fun asSavedGame(): SavedGame = SavedGame(
         gameModeId = gameMode.id,
-        levelIndex = if (gameMode is GameMode.Trails) gameMode.level.index else -1,
+        levelIndex = gameMode.levelKey,
         totalPoints = totalPoints,
         stonesInHand = stonesInHand,
         stonesOnBoard = stonesOnBoard,

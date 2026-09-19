@@ -67,10 +67,7 @@ class WordPlacementViewModel @AssistedInject constructor(
         val initialState = _state.value
         val savedState = gameStateRepository.loadGameState(
             gameModeId = initialState.gameMode.id,
-            level = when (initialState.gameMode) {
-                is GameMode.Trails -> initialState.gameMode.level.index
-                else -> -1
-            }
+            level = initialState.gameMode.levelKey,
         )?.asGameState()
         return savedState
     }
@@ -300,7 +297,7 @@ class WordPlacementViewModel @AssistedInject constructor(
             val gameMode = state.value.gameMode
             gameStateRepository.clearGameState(
                 gameModeId = gameMode.id,
-                level = if (gameMode is GameMode.Trails) gameMode.level.index else null
+                level = gameMode.levelKey,
             )
             _state.update {
                 GameState(gameMode = gameMode, stonesInBag = initialStonesInBag)

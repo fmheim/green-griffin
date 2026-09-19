@@ -7,7 +7,7 @@ import kotlinx.serialization.json.Json
 
 fun SavedGame.toEntity() : GameStateEntity = GameStateEntity(
     gameModeId = gameModeId,
-    level = levelIndex ?: -1,
+    level = levelIndex,
     gameStateJson = Json.encodeToString(this),
 )
 
