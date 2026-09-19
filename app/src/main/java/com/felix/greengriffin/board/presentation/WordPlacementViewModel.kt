@@ -53,10 +53,10 @@ class WordPlacementViewModel @AssistedInject constructor(
 
 
     init {
-        viewModelScope.launch {
-            loadInitialGameState()
-            observeLevelCompletion()
-        }
+        // Separate coroutines: observing completion must not depend on the one-shot load
+        // succeeding, and `observeLevelCompletion` never returns.
+        viewModelScope.launch { loadInitialGameState() }
+        viewModelScope.launch { observeLevelCompletion() }
     }
 
     private suspend fun loadInitialGameState() {
