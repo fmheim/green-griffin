@@ -8,6 +8,7 @@ import com.felix.greengriffin.board.data.repository.CompletedLevelsRepository
 import com.felix.greengriffin.board.data.repository.GameStateRepository
 import com.felix.greengriffin.board.domain.usecase.AreWordsValidUseCase
 import com.felix.greengriffin.board.domain.usecase.GameModeViolation.FirstWordNotOnCorrectStartPosition
+import com.felix.greengriffin.board.domain.usecase.GameModeViolation.PlacedOnBlockedField
 import com.felix.greengriffin.board.domain.usecase.IsPlacementValidUseCase
 import com.felix.greengriffin.board.domain.usecase.PlacementValidation
 import com.felix.greengriffin.board.domain.usecase.WordValidation.Valid
@@ -252,6 +253,7 @@ class WordPlacementViewModel @AssistedInject constructor(
             PlacementValidation.Valid -> null
             is PlacementValidation.Violation -> when (placementValidation.gameModeViolation) {
                 FirstWordNotOnCorrectStartPosition -> "Start trail on a starting field"
+                PlacedOnBlockedField -> "That field is blocked"
             }
         }
         _state.update { it.copy(errorText = errorText) }

@@ -1,6 +1,7 @@
 package com.felix.greengriffin.board.domain.usecase
 
 import com.felix.greengriffin.board.domain.usecase.GameModeViolation.FirstWordNotOnCorrectStartPosition
+import com.felix.greengriffin.board.domain.usecase.GameModeViolation.PlacedOnBlockedField
 import com.felix.greengriffin.board.presentation.GameMode
 import com.felix.greengriffin.board.presentation.TrailLevel
 import com.felix.greengriffin.board.presentation.components.StoneOnBoard
@@ -16,7 +17,8 @@ sealed interface PlacementValidation {
 }
 
 enum class GameModeViolation {
-    FirstWordNotOnCorrectStartPosition;
+    FirstWordNotOnCorrectStartPosition,
+    PlacedOnBlockedField,
 }
 
 class IsPlacementValidUseCase @Inject constructor() {
@@ -122,11 +124,15 @@ class IsPlacementValidUseCase @Inject constructor() {
         trailLevel: TrailLevel,
         stonesOnBoard: Set<StoneOnBoard>,
     ): PlacementValidation {
+        val isOnBlockedField = stonesOnBoard
+            .filterNot(StoneOnBoard::isLocked)
+            .any { it.toField() in trailLevel.blockedFields }
         val isOutsideStart = isTrailStartingOutsideStartFields(
             trailLevel = trailLevel,
             stonesOnBoard = stonesOnBoard
         )
         return when {
+            isOnBlockedField -> PlacementValidation.Violation(gameModeViolation = PlacedOnBlockedField)
             isOutsideStart -> PlacementValidation.Violation(gameModeViolation = FirstWordNotOnCorrectStartPosition)
             else -> PlacementValidation.Valid
         }

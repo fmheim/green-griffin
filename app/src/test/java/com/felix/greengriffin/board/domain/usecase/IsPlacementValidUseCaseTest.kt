@@ -155,4 +155,54 @@ class IsPlacementValidUseCaseTest {
     fun `fields are compared by value`() {
         assertEquals(Field(row = 3, column = 4), stone(3, 4).toField())
     }
+
+    @Test
+    fun `a word may not run through a blocked field`() {
+        val level = TrailLevel(
+            index = 0,
+            boardSize = 10,
+            startFields = setOf(Field(row = 0, column = 0)),
+            goalFields = setOf(Field(row = 0, column = 9)),
+            blockedFields = setOf(Field(row = 0, column = 2)),
+        )
+        assertEquals(
+            PlacementValidation.Violation(GameModeViolation.PlacedOnBlockedField),
+            validate(
+                stone(0, 0),
+                stone(0, 1),
+                stone(0, 2),
+                gameMode = GameMode.Trails(level),
+            ),
+        )
+    }
+
+    @Test
+    fun `a word beside a blocked field is fine`() {
+        val level = TrailLevel(
+            index = 0,
+            boardSize = 10,
+            startFields = setOf(Field(row = 0, column = 0)),
+            goalFields = setOf(Field(row = 0, column = 9)),
+            blockedFields = setOf(Field(row = 5, column = 5)),
+        )
+        assertEquals(
+            PlacementValidation.Valid,
+            validate(stone(0, 0), stone(0, 1), gameMode = GameMode.Trails(level)),
+        )
+    }
+
+    @Test
+    fun `the shipped levels have no blocked fields, so nothing changes for them`() {
+        trailLevels.forEach { level ->
+            assertEquals(
+                PlacementValidation.Valid,
+                isPlacementValid(
+                    stonesOnBoard = level.startFields.take(2)
+                        .mapIndexed { i, field -> stone(field.row, field.column, letter = "AB"[i]) }
+                        .toSet(),
+                    gameMode = GameMode.Trails(level),
+                ),
+            )
+        }
+    }
 }
