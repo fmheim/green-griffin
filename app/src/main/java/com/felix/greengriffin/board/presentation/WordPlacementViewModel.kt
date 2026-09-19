@@ -7,6 +7,7 @@ import com.felix.greengriffin.RouteToWordPlacementScreen
 import com.felix.greengriffin.board.data.repository.CompletedLevelsRepository
 import com.felix.greengriffin.board.data.repository.GameStateRepository
 import com.felix.greengriffin.board.domain.model.GameMode
+import com.felix.greengriffin.board.domain.model.SavedGame
 import com.felix.greengriffin.board.domain.model.StoneData
 import com.felix.greengriffin.board.domain.model.StoneInHand
 import com.felix.greengriffin.board.domain.model.Word
@@ -30,6 +31,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -57,15 +59,29 @@ class WordPlacementViewModel @AssistedInject constructor(
     /** Dictionary lookup for the placement currently on the board. */
     private var wordValidationJob: Job? = null
 
+    /** The single writer of the saved game; see [GameStateAutoSaver]. */
+    private val autoSaver = GameStateAutoSaver(gameStateRepository)
+
 
     init {
-        // Separate coroutines: observing completion must not depend on the one-shot load
+        // Saving only starts once the load has decided what the game is. Collecting
+        // earlier would race the load and could write the empty starting state over a
+        // saved game that is still being read.
+        viewModelScope.launch {
+            val restoredGame = loadInitialGameState()
+            autoSaver.start(
+                games = state.map(GameState::asSavedGame),
+                alreadyPersisted = restoredGame,
+                scope = viewModelScope,
+            )
+        }
+        // Separate coroutine: observing completion must not depend on the one-shot load
         // succeeding, and `observeLevelCompletion` never returns.
-        viewModelScope.launch { loadInitialGameState() }
         viewModelScope.launch { observeLevelCompletion() }
     }
 
-    private suspend fun loadInitialGameState() {
+    /** Puts the saved game back on the board, and returns it, or `null` for a new game. */
+    private suspend fun loadInitialGameState(): SavedGame? {
         val savedState = loadSavedState()
         when {
             savedState != null -> {
@@ -77,6 +93,10 @@ class WordPlacementViewModel @AssistedInject constructor(
 
             else -> initializeNewGame()
         }
+        // Read back off `_state` rather than off `savedState`, so this is by definition the
+        // value the save pipeline sees first and therefore recognises as already written,
+        // even if recomputing derived state above ever starts touching a persisted field.
+        return if (savedState != null) _state.value.asSavedGame() else null
     }
 
     private suspend fun loadSavedState(): GameState? {
@@ -107,12 +127,6 @@ class WordPlacementViewModel @AssistedInject constructor(
             }
 
             else -> Unit
-        }
-    }
-
-    private fun saveGameState() {
-        viewModelScope.launch(Dispatchers.IO) {
-            gameStateRepository.saveGameState(_state.value.asSavedGame())
         }
     }
 
@@ -155,7 +169,6 @@ class WordPlacementViewModel @AssistedInject constructor(
 
     private fun dismissJokerSelector() {
         _state.update { it.copy(jokerCoordinates = null) }
-        saveGameState()
     }
 
     private fun returnAllUnlockedStones() {
@@ -170,7 +183,6 @@ class WordPlacementViewModel @AssistedInject constructor(
                     errorText = null,
                 )
         }
-        saveGameState()
     }
 
     private fun drawStones() {
@@ -183,7 +195,6 @@ class WordPlacementViewModel @AssistedInject constructor(
                     currentState.moveStoneToHand(stone)
                 }
             }
-        saveGameState()
     }
 
     private fun completeLevelIfGoalReached() {
@@ -216,7 +227,6 @@ class WordPlacementViewModel @AssistedInject constructor(
                     )
                 )
             }
-            saveGameState()
             return
         }
 
@@ -231,13 +241,7 @@ class WordPlacementViewModel @AssistedInject constructor(
                 .clearEnteredField()
         }
 
-        onStoneMovedToBoard()
-        saveGameState()
-    }
-
-    private fun onStoneMovedToBoard() {
         revalidatePlacement()
-        saveGameState()
     }
 
     /**
@@ -295,7 +299,6 @@ class WordPlacementViewModel @AssistedInject constructor(
                     errorText = null,
                 )
         }
-        saveGameState()
     }
 
 
@@ -303,7 +306,6 @@ class WordPlacementViewModel @AssistedInject constructor(
         val currentState = _state.value
         if (currentState.isAbleToSubmit) {
             _state.update { it.lockInWord() }
-            saveGameState()
             drawStones()
             completeLevelIfGoalReached()
             return
@@ -318,7 +320,6 @@ class WordPlacementViewModel @AssistedInject constructor(
 
     private fun validateWords(words: List<String>) {
         _state.update { it.copy(isPromptLoading = true, isCurrentWordValid = null) }
-        saveGameState()
 
         wordValidationJob?.cancel()
         wordValidationJob = viewModelScope.launch(Dispatchers.IO) {
@@ -337,23 +338,20 @@ class WordPlacementViewModel @AssistedInject constructor(
                     isCurrentWordValid = wordValidation is Valid
                 )
             }
-            saveGameState()
         }
     }
 
+    /**
+     * Starts the game over. This only resets the state; the reset game is written by the
+     * same pipeline as every other change, so a save that was already in flight cannot
+     * bring the old board back afterwards.
+     */
     private fun clearGameState() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val gameMode = state.value.gameMode
-            gameStateRepository.clearGameState(
-                gameModeId = gameMode.id,
-                level = gameMode.levelKey,
-            )
-            _state.update {
-                GameState(gameMode = gameMode, stonesInBag = initialStonesInBag)
-            }
-            if (_state.value.isAbleToDrawStones) {
-                drawStones()
-            }
+        _state.update {
+            GameState(gameMode = it.gameMode, stonesInBag = initialStonesInBag)
+        }
+        if (_state.value.isAbleToDrawStones) {
+            drawStones()
         }
     }
 }
