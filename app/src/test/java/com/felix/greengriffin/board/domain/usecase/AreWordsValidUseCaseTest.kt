@@ -77,4 +77,27 @@ class AreWordsValidUseCaseTest {
         assertEquals(listOf("HAUS"), repository.lastQuery)
         assertTrue("case must not decide validity, was $result", result is WordValidation.Valid)
     }
+
+    @Test
+    fun `a word that also exists in a disallowed language is still valid`() = runBlocking {
+        // The dictionary lookup is not filtered by language, so a spelling that exists in
+        // several languages comes back as several entries.
+        val useCase = AreWordsValidUseCase(
+            FakeWordRepository(listOf(ValidWord("haus", "de"), ValidWord("haus", "en"))),
+        )
+
+        val result = useCase(words = listOf("HAUS"), allowedLanguages = listOf("de", "sv"))
+
+        assertTrue("HAUS is German; an English entry must not veto it, was $result", result is WordValidation.Valid)
+    }
+
+    @Test
+    fun `a duplicated word only needs to be valid once`() = runBlocking {
+        // Two crossing words can be the same string.
+        val useCase = AreWordsValidUseCase(FakeWordRepository(listOf(ValidWord("otto", "de"))))
+
+        val result = useCase(words = listOf("OTTO", "OTTO"), allowedLanguages = listOf("de", "sv"))
+
+        assertTrue(result is WordValidation.Valid)
+    }
 }

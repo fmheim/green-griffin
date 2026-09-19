@@ -32,13 +32,15 @@ class AreWordsValidUseCase @Inject constructor(
         }
 
         val wordsInDictionary = localWordRepository.getValidWords(words)
-        val allWordsAreInADictionary =
-            wordsInDictionary.map { it.word.lowercase() }.toSet() == words.map { it.lowercase() }
-                .toSet()
-        val isValidForLanguage =
-            allWordsAreInADictionary && wordsInDictionary.all { it.language in allowedLanguages }
+        val entriesInAllowedLanguages = wordsInDictionary.filter { it.language in allowedLanguages }
+        // Every checked word needs *an* entry in an allowed language. Asking whether
+        // *all* returned entries are allowed would let a word that also exists in some
+        // other language veto itself.
+        val everyWordIsAllowed = words.all { word ->
+            entriesInAllowedLanguages.any { it.word.equals(word, ignoreCase = true) }
+        }
         return when {
-            isValidForLanguage -> WordValidation.Valid(wordsInDictionary)
+            everyWordIsAllowed -> WordValidation.Valid(entriesInAllowedLanguages)
             else -> WordValidation.Invalid(
                 checkedWords = words,
                 allowedLanguages = allowedLanguages,
