@@ -1,0 +1,23 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew:*)",
+      "Bash(adb devices)",
+      "Bash(adb logcat:*)",
+      "Bash(sdkmanager --list:*)",
+      "Bash(sdkmanager --install:*)"
+    ]
+  }
+}

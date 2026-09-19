@@ -21,6 +21,7 @@ Game modes (`board/presentation/GameState.kt` → `sealed interface GameMode`):
 - All versions live in `gradle/libs.versions.toml`; add dependencies there, never inline.
 - `local.properties` must contain `apiKey=...` (read by the secrets Gradle plugin into `BuildConfig.apiKey`). Never commit or print it.
 - Release builds are minified with R8 (`app/proguard-rules.pro`).
+- In Claude Code cloud sessions the Android SDK and `local.properties` are provisioned by `.claude/scripts/cloud-setup.sh` (the environment's setup script) and `.claude/hooks/session-start.sh`. The environment must use **Custom** network access including `dl.google.com`, or nothing Android resolves. See `docs/claude-cloud-environment.md`.
 
 ## Package layout
 
