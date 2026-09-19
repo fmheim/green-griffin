@@ -27,7 +27,7 @@ data class TrailLevel(
     val boardSize: Int,
     val startFields: Set<Field>,
     val goalFields: Set<Field>,
-    val blockedField: Set<Field>,
+    val blockedFields: Set<Field> = emptySet(),
 )
 
 val trailLevels = setOf(
@@ -36,21 +36,18 @@ val trailLevels = setOf(
         boardSize = 10,
         startFields = List(10) { Field(row = it, column = 0) }.toSet(),
         goalFields = List(10) { Field(row = it, column = 9) }.toSet(),
-        blockedField = setOf(),
     ),
     TrailLevel(
         index = 2,
         boardSize = 10,
         startFields = List(10) { Field(row = 0, column = it) }.toSet(),
         goalFields = List(10) { Field(row = 9, column = it) }.toSet(),
-        blockedField = setOf(),
     ),
     TrailLevel(
         index = 3,
         boardSize = 10,
         startFields = List(6) { Field(row = it, column = 0) }.toSet(),
         goalFields = List(6) { Field(row = it + 4, column = 9) }.toSet(),
-        blockedField = setOf(),
     ),
 
 )

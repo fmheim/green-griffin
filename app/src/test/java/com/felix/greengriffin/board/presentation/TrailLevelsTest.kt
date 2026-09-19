@@ -15,7 +15,7 @@ class TrailLevelsTest {
     @Test
     fun `no level references a field outside its own board`() {
         trailLevels.forEach { level ->
-            val allFields = level.startFields + level.goalFields + level.blockedField
+            val allFields = level.startFields + level.goalFields + level.blockedFields
             val outOfBounds = allFields.filterNot { field ->
                 field.row in 0 until level.boardSize && field.column in 0 until level.boardSize
             }

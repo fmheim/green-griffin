@@ -130,7 +130,7 @@ class IsPlacementValidUseCaseTest {
             boardSize = 10,
             startFields = emptySet(),
             goalFields = emptySet(),
-            blockedField = emptySet(),
+            blockedFields = emptySet(),
         )
         assertEquals(
             PlacementValidation.Violation(GameModeViolation.FirstWordNotOnCorrectStartPosition),
