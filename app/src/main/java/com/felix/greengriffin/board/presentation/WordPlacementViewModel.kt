@@ -272,19 +272,20 @@ class WordPlacementViewModel @AssistedInject constructor(
 
 
     private fun onSubmitClick() {
-        println("SubmitClick")
-        val isValid = _state.value.isAbleToSubmit
-
-        println("isValid: $isValid")
-        if (!isValid) {
-            // show error
-            println("Invalid word placement")
+        val currentState = _state.value
+        if (currentState.isAbleToSubmit) {
+            _state.update { it.lockInWord() }
+            saveGameState()
+            drawStones()
+            maybeCompleteLevel()
             return
         }
-        _state.update { it.lockInWord() }
-        saveGameState()
-        drawStones()
-        maybeCompleteLevel()
+
+        // An unusable placement already shows its own message. The one verdict with no
+        // feedback of its own is the dictionary's, so say that out loud.
+        if (currentState.isValidPlacement && !currentState.isPromptLoading) {
+            _state.update { it.copy(errorText = "Not a word") }
+        }
     }
 
     private fun validateWords(words: List<String>) {
