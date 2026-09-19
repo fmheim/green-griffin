@@ -3,9 +3,7 @@ package com.felix.greengriffin.board.domain.usecase
 import com.felix.greengriffin.board.domain.usecase.GameModeViolation.FirstWordNotOnCorrectStartPosition
 import com.felix.greengriffin.board.presentation.GameMode
 import com.felix.greengriffin.board.presentation.TrailLevel
-import com.felix.greengriffin.board.presentation.components.StoneData
 import com.felix.greengriffin.board.presentation.components.StoneOnBoard
-import com.felix.greengriffin.util.extensions.list.isEmptyOrOnlyNulls
 import javax.inject.Inject
 
 sealed interface PlacementValidation {
@@ -66,26 +64,27 @@ class IsPlacementValidUseCase @Inject constructor() {
         }
 
 
-        val lockedNeighbourStones = mutableListOf<StoneData>()
+        var hasLockedNeighbour = false
 
         for (unlockedStone in sortedUnlockedStones) {
-            val neighbourStones = listOf(
-                stonesOnBoard.find { it.isToLeftOf(unlockedStone) },
-                stonesOnBoard.find { it.isAbove(unlockedStone) },
-                stonesOnBoard.find { it.isToRightOf(unlockedStone) },
-                stonesOnBoard.find { it.isBelow(unlockedStone) }
+            val neighbourStones = listOfNotNull(
+                stonesOnBoard.firstOrNull { it.isToLeftOf(unlockedStone) },
+                stonesOnBoard.firstOrNull { it.isAbove(unlockedStone) },
+                stonesOnBoard.firstOrNull { it.isToRightOf(unlockedStone) },
+                stonesOnBoard.firstOrNull { it.isBelow(unlockedStone) },
             )
 
-            if (neighbourStones.isEmptyOrOnlyNulls()) {
+            if (neighbourStones.isEmpty()) {
                 return PlacementValidation.NotConnected
             }
 
-            val lockedStones = neighbourStones.filter { it?.isLocked == true }.filterNotNull()
-            lockedNeighbourStones.addAll(lockedStones)
+            if (neighbourStones.any(StoneOnBoard::isLocked)) {
+                hasLockedNeighbour = true
+            }
         }
 
         val isConnectedOrFirstMove =
-            lockedNeighbourStones.isNotEmpty() || stonesOnBoard.none { it.isLocked }
+            hasLockedNeighbour || stonesOnBoard.none { it.isLocked }
 
         val gameModeValidation = when (gameMode) {
             is GameMode.FreePlay -> PlacementValidation.Valid
@@ -152,7 +151,3 @@ class IsPlacementValidUseCase @Inject constructor() {
         get() = map { it.columnIndex }.toSet().size == 1
 }
 
-// Extension function to find related stones
-private fun Set<StoneOnBoard>.find(predicate: (StoneOnBoard) -> Boolean): StoneOnBoard? {
-    return firstOrNull(predicate)
-}

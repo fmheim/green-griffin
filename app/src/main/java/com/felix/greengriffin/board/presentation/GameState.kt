@@ -144,25 +144,6 @@ data class GameState(
             DEFAULT_BOARD_SIZE
         }
 
-    val firstEmptyCoordinates: JokerCoordinates
-        get() {
-            val lastColumn =
-                stonesOnBoard.maxOfOrNull { it.columnIndex } ?: return JokerCoordinates(0, 0)
-            val lastRow = stonesOnBoard.maxOfOrNull { it.rowIndex } ?: return JokerCoordinates(0, 0)
-            val occupied = stonesOnBoard
-                .map { it.columnIndex to it.rowIndex }
-                .toSet()
-
-            for (col in 0..lastColumn) {
-                for (row in 0..lastRow) {
-                    if (Pair(col, row) !in occupied) {
-                        return JokerCoordinates(row, col)
-                    }
-                }
-            }
-            return JokerCoordinates(0, 0)
-        }
-
     val currentUserStonesInHand get() = stonesInHand.filter { it.userId == currentUserId }
     private val unlockedStonesOnBoard get() = stonesOnBoard.filterNot(StoneOnBoard::isLocked)
     private val unlockedStonesAlignment
