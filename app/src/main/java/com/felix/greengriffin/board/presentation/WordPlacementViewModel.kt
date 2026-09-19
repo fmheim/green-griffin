@@ -217,6 +217,8 @@ class WordPlacementViewModel @AssistedInject constructor(
                     rowIndex = rowIndex,
                     columnIndex = columnIndex
                 )
+                // The drag is over, so the hover highlight has to go with it.
+                .clearEnteredField()
         }
 
         onStoneMovedToBoard()
