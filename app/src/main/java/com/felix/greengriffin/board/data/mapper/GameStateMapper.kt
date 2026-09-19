@@ -1,7 +1,7 @@
 package com.felix.greengriffin.board.data.mapper
 
 import com.felix.greengriffin.board.data.local.GameStateEntity
-import com.felix.greengriffin.board.presentation.SavedGame
+import com.felix.greengriffin.board.domain.model.SavedGame
 import kotlinx.serialization.json.Json
 
 /**

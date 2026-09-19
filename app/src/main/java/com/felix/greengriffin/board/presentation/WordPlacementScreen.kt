@@ -64,17 +64,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.felix.greengriffin.R
+import com.felix.greengriffin.board.domain.model.GameMode
+import com.felix.greengriffin.board.domain.model.GameMode.Trails
+import com.felix.greengriffin.board.domain.model.StoneData
+import com.felix.greengriffin.board.domain.model.StoneInBag
+import com.felix.greengriffin.board.domain.model.StoneInHand
+import com.felix.greengriffin.board.domain.model.StoneOnBoard
 import com.felix.greengriffin.board.presentation.GameEvent.StoneDroppedOnBoard
-import com.felix.greengriffin.board.presentation.GameMode.Trails
 import com.felix.greengriffin.board.presentation.components.DraggableStone
-import com.felix.greengriffin.board.presentation.components.StoneData
-import com.felix.greengriffin.board.presentation.components.StoneInBag
-import com.felix.greengriffin.board.presentation.components.StoneInHand
-import com.felix.greengriffin.board.presentation.components.StoneOnBoard
 import com.felix.greengriffin.board.presentation.components.StoneSelector
 import com.felix.greengriffin.board.presentation.components.StonesRow
+import com.felix.greengriffin.board.presentation.components.stoneFromClipData
 import com.felix.greengriffin.core.presentation.icons.Delete
 import com.felix.greengriffin.core.presentation.theme.GreenGriffinTheme
+import com.felix.greengriffin.trails.domain.model.trailLevels
 import com.felix.greengriffin.util.extensions.compose.animatedGradientBrush
 
 
@@ -314,8 +317,8 @@ fun WordBoard(
                         target = remember {
                             object : DragAndDropTarget {
                                 override fun onDrop(event: DragAndDropEvent): Boolean {
-                                    val data = StoneData
-                                        .fromClipData(clipData = event.toAndroidDragEvent().clipData)
+                                    val data =
+                                        stoneFromClipData(clipData = event.toAndroidDragEvent().clipData)
                                         ?: return false
                                     onEvent(
                                         StoneDroppedOnBoard(

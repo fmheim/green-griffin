@@ -1,5 +1,8 @@
 package com.felix.greengriffin.board.presentation
 
+import com.felix.greengriffin.board.domain.model.GameMode
+import com.felix.greengriffin.board.domain.model.SavedGame
+import com.felix.greengriffin.trails.domain.model.trailLevels
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

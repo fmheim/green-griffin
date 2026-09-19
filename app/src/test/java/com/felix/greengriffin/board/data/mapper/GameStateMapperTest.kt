@@ -1,11 +1,11 @@
 package com.felix.greengriffin.board.data.mapper
 
 import com.felix.greengriffin.board.data.local.GameStateEntity
-import com.felix.greengriffin.board.presentation.GameMode
-import com.felix.greengriffin.board.presentation.SavedGame
-import com.felix.greengriffin.board.presentation.components.StoneInBag
-import com.felix.greengriffin.board.presentation.components.StoneInHand
-import com.felix.greengriffin.board.presentation.components.StoneOnBoard
+import com.felix.greengriffin.board.domain.model.GameMode
+import com.felix.greengriffin.board.domain.model.SavedGame
+import com.felix.greengriffin.board.domain.model.StoneInBag
+import com.felix.greengriffin.board.domain.model.StoneInHand
+import com.felix.greengriffin.board.domain.model.StoneOnBoard
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

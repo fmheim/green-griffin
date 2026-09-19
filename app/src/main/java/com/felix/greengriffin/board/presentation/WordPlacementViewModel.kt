@@ -6,6 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.felix.greengriffin.RouteToWordPlacementScreen
 import com.felix.greengriffin.board.data.repository.CompletedLevelsRepository
 import com.felix.greengriffin.board.data.repository.GameStateRepository
+import com.felix.greengriffin.board.domain.model.GameMode
+import com.felix.greengriffin.board.domain.model.StoneData
+import com.felix.greengriffin.board.domain.model.StoneInHand
+import com.felix.greengriffin.board.domain.model.initialStonesInBag
 import com.felix.greengriffin.board.domain.usecase.AreWordsValidUseCase
 import com.felix.greengriffin.board.domain.usecase.GameModeViolation.FirstWordNotOnCorrectStartPosition
 import com.felix.greengriffin.board.domain.usecase.GameModeViolation.PlacedOnBlockedField
@@ -13,8 +17,6 @@ import com.felix.greengriffin.board.domain.usecase.IsPlacementValidUseCase
 import com.felix.greengriffin.board.domain.usecase.PlacementValidation
 import com.felix.greengriffin.board.domain.usecase.WordValidation.Valid
 import com.felix.greengriffin.board.presentation.GameState.JokerCoordinates
-import com.felix.greengriffin.board.presentation.components.StoneData
-import com.felix.greengriffin.board.presentation.components.StoneInHand
 import com.felix.greengriffin.trails.domain.usecase.CompleteTrailLevelIfGoalReachedUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
