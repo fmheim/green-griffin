@@ -42,7 +42,7 @@ com.felix.greengriffin/
 ├── trails/
 │   ├── domain/usecase/
 │   └── presentation/levels/   # TrailLevelsScreen (in TrailLevels.kt) + ViewModel
-├── core/presentation/     # theme/, components/, drawing/ (Grass, Water), icons/
+├── core/presentation/     # theme/, icons/
 ├── di/                    # AppModule, DatabaseModule, WordValidationModule
 └── util/extensions/
 ```

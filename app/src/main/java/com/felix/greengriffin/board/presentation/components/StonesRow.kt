@@ -74,8 +74,6 @@ fun StonesRow(
                     modifier = Modifier.animateItem(),
                     width = width.dp,
                     data = data,
-                    backgroundRes = state.stoneBackgroundImageRes,
-                    textImageRes = state.stoneTextImageRes,
                 )
                 if (index < state.stonesInHand.lastIndex) Spacer(
                     modifier = Modifier.width(

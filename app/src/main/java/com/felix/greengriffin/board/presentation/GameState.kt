@@ -1,8 +1,6 @@
 package com.felix.greengriffin.board.presentation
 
-import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Immutable
-import com.felix.greengriffin.R
 import com.felix.greengriffin.board.presentation.components.StoneData
 import com.felix.greengriffin.board.presentation.components.StoneInBag
 import com.felix.greengriffin.board.presentation.components.StoneInHand
@@ -27,9 +25,7 @@ data class TrailLevel(
     val startFields: Set<Field>,
     val goalFields: Set<Field>,
     val blockedField: Set<Field>,
-    @DrawableRes val backgroundRes: Int? = null,
-    @DrawableRes val textImageRes: Int? = null,
-    )
+)
 
 val trailLevels = setOf(
     TrailLevel(
@@ -38,8 +34,6 @@ val trailLevels = setOf(
         startFields = List(10) { Field(row = it, column = 0) }.toSet(),
         goalFields = List(10) { Field(row = it, column = 9) }.toSet(),
         blockedField = setOf(),
-        backgroundRes = R.drawable.stone,
-        textImageRes = R.drawable.pure_stone,
     ),
     TrailLevel(
         index = 2,
@@ -47,8 +41,6 @@ val trailLevels = setOf(
         startFields = List(10) { Field(row = 0, column = it) }.toSet(),
         goalFields = List(10) { Field(row = 9, column = it) }.toSet(),
         blockedField = setOf(),
-        backgroundRes = R.drawable.stone,
-        textImageRes = R.drawable.pure_stone,
     ),
     TrailLevel(
         index = 3,
@@ -56,8 +48,6 @@ val trailLevels = setOf(
         startFields = List(6) { Field(row = it, column = 0) }.toSet(),
         goalFields = List(6) { Field(row = it + 5, column = 9) }.toSet(),
         blockedField = setOf(),
-        backgroundRes = R.drawable.stone,
-        textImageRes = R.drawable.pure_stone,
     ),
 
 )
@@ -260,15 +250,6 @@ data class GameState(
 
     val hasError: Boolean
         get() = errorText != null
-
-    val stoneBackgroundImageRes: Int? get() = when(gameMode){
-        is GameMode.Trails -> gameMode.level.backgroundRes
-        is GameMode.FreePlay -> null
-    }
-    val stoneTextImageRes: Int? get() = when(gameMode){
-        is GameMode.Trails -> gameMode.level.textImageRes
-        is GameMode.FreePlay -> null
-    }
 
     private fun getWordsFromHorizontalPlacement(): List<Word> {
         val createdWords = mutableListOf<Word>()

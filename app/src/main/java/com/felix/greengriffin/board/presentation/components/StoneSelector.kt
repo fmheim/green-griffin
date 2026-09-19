@@ -1,6 +1,5 @@
 package com.felix.greengriffin.board.presentation.components
 
-import androidx.annotation.DrawableRes
 import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -35,7 +34,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.window.DialogProperties
-import com.felix.greengriffin.R
 import com.felix.greengriffin.board.presentation.germanAlphabet
 import com.felix.greengriffin.core.presentation.theme.GreenGriffinTheme
 import java.util.UUID
@@ -46,8 +44,6 @@ fun StoneSelector(
     onLetterSelected: (Char) -> Unit,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    @DrawableRes backgroundImageRes: Int? = null,
-    @DrawableRes textImageRes: Int? = null,
     alphabet: List<Char> = germanAlphabet, // todo implement persistent list
 ) {
     val pagerState = rememberPagerState(pageCount = alphabet::size)
@@ -114,8 +110,6 @@ fun StoneSelector(
                                         value = 0,
                                         id = UUID.randomUUID().toString()
                                     ),
-                                    backgroundRes = backgroundImageRes,
-                                    textImageRes = textImageRes,
                                 )
                             }
                         }
@@ -179,8 +173,6 @@ fun StoneSelectorPreview() = GreenGriffinTheme {
             onLetterSelected = { showDialog.value = false },
             onDismissRequest = { showDialog.value = false },
             alphabet = germanAlphabet,
-            backgroundImageRes = R.drawable.stone,
-            textImageRes = R.drawable.pure_stone
         )
     }
 }
