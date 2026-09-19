@@ -22,6 +22,15 @@ class AreWordsValidUseCase @Inject constructor(
         words: List<String>,
         allowedLanguages: List<String>,
     ): WordValidation {
+        // "Nothing was spelled" is never a valid placement, and an empty `IN ()` query
+        // would otherwise make every comparison below trivially true.
+        if (words.isEmpty()) {
+            return WordValidation.Invalid(
+                checkedWords = words,
+                allowedLanguages = allowedLanguages,
+            )
+        }
+
         val wordsInDictionary = localWordRepository.getValidWords(words)
         val allWordsAreInADictionary =
             wordsInDictionary.map { it.word.lowercase() }.toSet() == words.map { it.lowercase() }
