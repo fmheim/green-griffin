@@ -16,7 +16,7 @@ sealed interface WordValidation {
 }
 
 class AreWordsValidUseCase @Inject constructor(
-    private val localWordRepository: WordRepository,
+    private val wordRepository: WordRepository,
 ) {
     suspend operator fun invoke(
         words: List<String>,
@@ -31,7 +31,7 @@ class AreWordsValidUseCase @Inject constructor(
             )
         }
 
-        val wordsInDictionary = localWordRepository.getValidWords(words)
+        val wordsInDictionary = wordRepository.getValidWords(words)
         val entriesInAllowedLanguages = wordsInDictionary.filter { it.language in allowedLanguages }
         // Every checked word needs *an* entry in an allowed language. Asking whether
         // *all* returned entries are allowed would let a word that also exists in some

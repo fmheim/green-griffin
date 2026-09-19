@@ -176,7 +176,7 @@ class WordPlacementViewModel @AssistedInject constructor(
         saveGameState()
     }
 
-    private fun maybeCompleteLevel() {
+    private fun completeLevelIfGoalReached() {
         when (val gameMode = _state.value.gameMode) {
             GameMode.FreePlay -> Unit
             is GameMode.Trails -> {
@@ -278,7 +278,7 @@ class WordPlacementViewModel @AssistedInject constructor(
             _state.update { it.lockInWord() }
             saveGameState()
             drawStones()
-            maybeCompleteLevel()
+            completeLevelIfGoalReached()
             return
         }
 
