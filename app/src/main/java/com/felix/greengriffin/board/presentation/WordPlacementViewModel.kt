@@ -27,7 +27,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 
 @HiltViewModel(assistedFactory = WordPlacementViewModel.Factory::class)
@@ -130,17 +129,20 @@ class WordPlacementViewModel @AssistedInject constructor(
     }
 
     private fun onJokerSelected(letter: Char) {
+        val currentState = _state.value
+        // Without a pending joker there is nothing to turn into a letter, and without a
+        // blank in hand there is nothing to pay with.
+        val coordinates = currentState.jokerCoordinates ?: return
+        val blank = currentState.stonesInHand.firstOrNull(StoneInHand::isJoker)
+        if (blank == null) {
+            dismissJokerSelector()
+            return
+        }
+
         moveStoneToBoard(
-            stoneData = StoneInHand(
-                letter = letter,
-                value = 0,
-                id = UUID.randomUUID().toString(),
-                userId = 1
-            ),
-            rowIndex = _state.value.jokerCoordinates?.row
-                ?: _state.value.firstEmptyCoordinates.row,
-            columnIndex = _state.value.jokerCoordinates?.column
-                ?: _state.value.firstEmptyCoordinates.column
+            stoneData = blank.copy(letter = letter),
+            rowIndex = coordinates.row,
+            columnIndex = coordinates.column,
         )
         dismissJokerSelector()
     }
