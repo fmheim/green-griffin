@@ -3,8 +3,8 @@ package com.felix.greengriffin.board.domain.usecase
 import com.felix.greengriffin.board.domain.model.Alignment
 import com.felix.greengriffin.board.domain.model.GameMode
 import com.felix.greengriffin.board.domain.model.StoneOnBoard
-import com.felix.greengriffin.board.domain.model.areHorizontallyAligned
-import com.felix.greengriffin.board.domain.model.areVerticallyAligned
+import com.felix.greengriffin.board.domain.model.alignmentOf
+import com.felix.greengriffin.board.domain.model.sortedForAlignment
 import com.felix.greengriffin.board.domain.usecase.GameModeViolation.FirstWordNotOnCorrectStartPosition
 import com.felix.greengriffin.board.domain.usecase.GameModeViolation.PlacedOnBlockedField
 import com.felix.greengriffin.trails.domain.model.TrailLevel
@@ -36,13 +36,13 @@ class IsPlacementValidUseCase @Inject constructor() {
             return PlacementValidation.NoStonesPlaced
         }
 
-        val alignment = getAlignment(unlockedStonesOnBoard)
+        val alignment = alignmentOf(unlockedStonesOnBoard)
 
         if (alignment == Alignment.Unaligned) {
             return PlacementValidation.NotAligned
         }
 
-        val sortedUnlockedStones = sortStones(unlockedStonesOnBoard, alignment)
+        val sortedUnlockedStones = unlockedStonesOnBoard.sortedForAlignment(alignment)
         val firstStone = sortedUnlockedStones.first()
         val lastStone = sortedUnlockedStones.last()
 
@@ -104,23 +104,6 @@ class IsPlacementValidUseCase @Inject constructor() {
             else -> gameModeValidation
         }
 
-    }
-
-    private fun getAlignment(stones: List<StoneOnBoard>): Alignment {
-        return when {
-            stones.size == 1 -> Alignment.Single
-            stones.areHorizontallyAligned -> Alignment.Horizontal
-            stones.areVerticallyAligned -> Alignment.Vertical
-            else -> Alignment.Unaligned
-        }
-    }
-
-    private fun sortStones(stones: List<StoneOnBoard>, alignment: Alignment): List<StoneOnBoard> {
-        return when (alignment) {
-            Alignment.Horizontal -> stones.sortedBy(StoneOnBoard::columnIndex)
-            Alignment.Vertical -> stones.sortedBy(StoneOnBoard::rowIndex)
-            else -> stones
-        }
     }
 
     private fun validateTrailGameMode(
