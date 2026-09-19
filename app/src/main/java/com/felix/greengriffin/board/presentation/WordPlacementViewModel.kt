@@ -144,7 +144,7 @@ class WordPlacementViewModel @AssistedInject constructor(
             currentState
                 .moveAllUnlockedStonesToHand()
                 .clearEnteredField()
-                .copy(isValidPlacement = false, isCurrentWordValid = null)
+                .copy(isValidPlacement = false, isCurrentWordValid = null, errorText = null)
         }
         saveGameState()
     }
@@ -248,7 +248,7 @@ class WordPlacementViewModel @AssistedInject constructor(
             currentState
                 .moveStoneToHand(stoneData)
                 .clearEnteredField()
-                .copy(isValidPlacement = false, isCurrentWordValid = null)
+                .copy(isValidPlacement = false, isCurrentWordValid = null, errorText = null)
         }
         saveGameState()
     }
