@@ -84,19 +84,35 @@ if [ "$SDK_READY" = yes ]; then
   done
   [ -n "$COMPILE_SDK" ] || COMPILE_SDK=$DEFAULT_COMPILE_SDK
 
+  # One --list pass feeds both lookups below; it is the slow part.
+  AVAILABLE=$("$SDKMANAGER" --list 2>/dev/null \
+    | awk -F'|' '/^[[:space:]]+[a-z-]+;/ { gsub(/[[:space:]]/, "", $1); print $1 }' \
+    | grep -vE 'rc|alpha|beta' | sort -u)
+
   # Newest stable build-tools, so this does not need bumping every time AGP
   # moves its default forward.
-  BUILD_TOOLS=$("$SDKMANAGER" --list 2>/dev/null \
-    | awk -F'|' '/^[[:space:]]+build-tools;/ { gsub(/[[:space:]]/, "", $1); print $1 }' \
-    | grep -vE 'rc|alpha|beta' | sort -V | tail -1)
+  BUILD_TOOLS=$(echo "$AVAILABLE" | grep -E '^build-tools;' | sort -V | tail -1)
   [ -n "$BUILD_TOOLS" ] || BUILD_TOOLS="build-tools;${COMPILE_SDK}.0.0"
+
+  # Since Android 16 the platforms are published with a minor version
+  # ("platforms;android-37.0"), and the bare "platforms;android-37" that this
+  # script used to ask for no longer exists - sdkmanager then failed with
+  # nothing installed. Prefer an exact match for the older naming, fall back to
+  # the ".0" minor that AGP maps a plain compileSdk to, and only then to the
+  # newest minor that is offered.
+  PLATFORM=$(echo "$AVAILABLE" | grep -xE "platforms;android-${COMPILE_SDK}")
+  [ -n "$PLATFORM" ] || PLATFORM=$(echo "$AVAILABLE" | grep -xE "platforms;android-${COMPILE_SDK}\.0")
+  [ -n "$PLATFORM" ] || PLATFORM=$(echo "$AVAILABLE" \
+    | grep -E "^platforms;android-${COMPILE_SDK}(\.[0-9]+)?$" | sort -V | tail -1)
+  [ -n "$PLATFORM" ] || PLATFORM="platforms;android-${COMPILE_SDK}"
 
   echo "[android-setup] accepting licences"
   yes 2>/dev/null | "$SDKMANAGER" --licenses >/dev/null 2>&1
 
-  echo "[android-setup] installing platform-tools, platforms;android-${COMPILE_SDK}, ${BUILD_TOOLS}"
+  echo "[android-setup] installing platform-tools, ${PLATFORM}, ${BUILD_TOOLS}"
+  # stderr is kept: when this fails it is the only clue why.
   if "$SDKMANAGER" --install \
-      "platform-tools" "platforms;android-${COMPILE_SDK}" "$BUILD_TOOLS" >/dev/null; then
+      "platform-tools" "$PLATFORM" "$BUILD_TOOLS" >/dev/null; then
     echo "[android-setup] Android SDK ready at $SDK_ROOT"
   else
     echo "[android-setup] ERROR: sdkmanager could not install the SDK packages."
