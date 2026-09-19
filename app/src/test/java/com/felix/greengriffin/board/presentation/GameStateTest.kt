@@ -1,7 +1,8 @@
 package com.felix.greengriffin.board.presentation
 
-import com.felix.greengriffin.board.presentation.components.StoneInHand
-import com.felix.greengriffin.board.presentation.components.StoneOnBoard
+import com.felix.greengriffin.board.domain.model.StoneInHand
+import com.felix.greengriffin.board.domain.model.StoneOnBoard
+import com.felix.greengriffin.board.domain.model.initialStonesInBag
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

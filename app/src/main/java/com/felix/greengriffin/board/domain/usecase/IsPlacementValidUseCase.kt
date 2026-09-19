@@ -1,10 +1,13 @@
 package com.felix.greengriffin.board.domain.usecase
 
+import com.felix.greengriffin.board.domain.model.Alignment
+import com.felix.greengriffin.board.domain.model.GameMode
+import com.felix.greengriffin.board.domain.model.StoneOnBoard
+import com.felix.greengriffin.board.domain.model.areHorizontallyAligned
+import com.felix.greengriffin.board.domain.model.areVerticallyAligned
 import com.felix.greengriffin.board.domain.usecase.GameModeViolation.FirstWordNotOnCorrectStartPosition
 import com.felix.greengriffin.board.domain.usecase.GameModeViolation.PlacedOnBlockedField
-import com.felix.greengriffin.board.presentation.GameMode
-import com.felix.greengriffin.board.presentation.TrailLevel
-import com.felix.greengriffin.board.presentation.components.StoneOnBoard
+import com.felix.greengriffin.trails.domain.model.TrailLevel
 import javax.inject.Inject
 
 sealed interface PlacementValidation {
@@ -145,15 +148,5 @@ class IsPlacementValidUseCase @Inject constructor() {
         val startFields = trailLevel.startFields
         return (stonesOnBoard.map(StoneOnBoard::toField).none { it in startFields })
     }
-
-    private enum class Alignment {
-        Horizontal, Vertical, Single, Unaligned
-    }
-
-    private val List<StoneOnBoard>.areHorizontallyAligned: Boolean
-        get() = map { it.rowIndex }.toSet().size == 1
-
-    private val List<StoneOnBoard>.areVerticallyAligned: Boolean
-        get() = map { it.columnIndex }.toSet().size == 1
 }
 

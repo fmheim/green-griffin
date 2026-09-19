@@ -1,5 +1,6 @@
-package com.felix.greengriffin.board.presentation
+package com.felix.greengriffin.trails.domain.model
 
+import com.felix.greengriffin.board.domain.model.Field
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

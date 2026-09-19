@@ -3,10 +3,10 @@ package com.felix.greengriffin.trails.domain.usecase
 import com.felix.greengriffin.board.data.local.CompletedLevelEntity
 import com.felix.greengriffin.board.data.local.CompletedLevelsDao
 import com.felix.greengriffin.board.data.repository.CompletedLevelsRepository
-import com.felix.greengriffin.board.presentation.Field
-import com.felix.greengriffin.board.presentation.GameMode
-import com.felix.greengriffin.board.presentation.TrailLevel
-import com.felix.greengriffin.board.presentation.components.StoneOnBoard
+import com.felix.greengriffin.board.domain.model.Field
+import com.felix.greengriffin.board.domain.model.GameMode
+import com.felix.greengriffin.board.domain.model.StoneOnBoard
+import com.felix.greengriffin.trails.domain.model.TrailLevel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking

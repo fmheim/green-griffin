@@ -3,9 +3,9 @@ package com.felix.greengriffin.trails.presentation.levels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.felix.greengriffin.board.data.repository.CompletedLevelsRepository
-import com.felix.greengriffin.board.presentation.GameMode
-import com.felix.greengriffin.board.presentation.GameMode.Companion.TRAILS_ID
-import com.felix.greengriffin.board.presentation.trailLevels
+import com.felix.greengriffin.board.domain.model.GameMode
+import com.felix.greengriffin.board.domain.model.GameMode.Companion.TRAILS_ID
+import com.felix.greengriffin.trails.domain.model.trailLevels
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

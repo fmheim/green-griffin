@@ -56,8 +56,8 @@ fun StonesRow(
                     target = remember {
                         object : DragAndDropTarget {
                             override fun onDrop(event: DragAndDropEvent): Boolean {
-                                val data = StoneData
-                                    .fromClipData(clipData = event.toAndroidDragEvent().clipData)
+                                val data =
+                                    stoneFromClipData(clipData = event.toAndroidDragEvent().clipData)
                                     ?: return false
                                 onEvent(
                                     StoneDroppedOnHand(

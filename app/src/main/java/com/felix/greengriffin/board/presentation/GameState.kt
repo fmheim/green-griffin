@@ -1,114 +1,23 @@
 package com.felix.greengriffin.board.presentation
 
 import androidx.compose.runtime.Immutable
-import com.felix.greengriffin.board.presentation.components.StoneData
-import com.felix.greengriffin.board.presentation.components.StoneInBag
-import com.felix.greengriffin.board.presentation.components.StoneInHand
-import com.felix.greengriffin.board.presentation.components.StoneOnBoard
-import com.felix.greengriffin.board.presentation.components.Word
-import com.felix.greengriffin.board.presentation.components.asWord
-import kotlinx.serialization.Serializable
-import java.util.UUID
+import com.felix.greengriffin.board.domain.model.Alignment
+import com.felix.greengriffin.board.domain.model.GameMode
+import com.felix.greengriffin.board.domain.model.SavedGame
+import com.felix.greengriffin.board.domain.model.StoneData
+import com.felix.greengriffin.board.domain.model.StoneInBag
+import com.felix.greengriffin.board.domain.model.StoneInHand
+import com.felix.greengriffin.board.domain.model.StoneOnBoard
+import com.felix.greengriffin.board.domain.model.Word
+import com.felix.greengriffin.board.domain.model.areHorizontallyAligned
+import com.felix.greengriffin.board.domain.model.areVerticallyAligned
+import com.felix.greengriffin.board.domain.model.asWord
+import com.felix.greengriffin.trails.domain.model.trailLevels
 
 const val DEFAULT_BOARD_SIZE = 10
 
 /** Number of stones a player holds when their hand is full. */
 const val HAND_SIZE = 7
-
-@Serializable
-data class Field(
-    val row: Int,
-    val column: Int,
-)
-
-@Serializable
-data class TrailLevel(
-    val index: Int,
-    val boardSize: Int,
-    val startFields: Set<Field>,
-    val goalFields: Set<Field>,
-    val blockedFields: Set<Field> = emptySet(),
-)
-
-val trailLevels = setOf(
-    TrailLevel(
-        index = 1,
-        boardSize = 10,
-        startFields = List(10) { Field(row = it, column = 0) }.toSet(),
-        goalFields = List(10) { Field(row = it, column = 9) }.toSet(),
-    ),
-    TrailLevel(
-        index = 2,
-        boardSize = 10,
-        startFields = List(10) { Field(row = 0, column = it) }.toSet(),
-        goalFields = List(10) { Field(row = 9, column = it) }.toSet(),
-    ),
-    TrailLevel(
-        index = 3,
-        boardSize = 10,
-        startFields = List(6) { Field(row = it, column = 0) }.toSet(),
-        goalFields = List(6) { Field(row = it + 4, column = 9) }.toSet(),
-    ),
-
-)
-
-@Serializable
-sealed interface GameMode {
-    val id: Int
-
-    /** Identifies the saved game of this mode. Modes without levels use [NO_LEVEL]. */
-    val levelKey: Int
-
-    @Serializable
-    data object FreePlay : GameMode {
-        override val id: Int
-            get() = FREE_PLAY_ID
-
-        override val levelKey: Int
-            get() = NO_LEVEL
-    }
-
-    @Serializable
-    data class Trails(val level: TrailLevel) : GameMode {
-
-        override val id: Int
-            get() = TRAILS_ID
-
-        override val levelKey: Int
-            get() = level.index
-
-        fun isStartField(row: Int, column: Int) =
-            level.startFields.contains(row = row, column = column)
-
-        fun isGoalField(row: Int, column: Int) =
-            level.goalFields.contains(row = row, column = column)
-
-
-    }
-
-    companion object {
-        const val FREE_PLAY_ID = 1
-        const val TRAILS_ID = 2
-
-        /** Level key of a game mode that has no levels. Persisted, so it must not change. */
-        const val NO_LEVEL = -1
-        /**
-         * The mode a persisted id refers to, or `null` when it refers to nothing this
-         * build knows about. Callers discard such data instead of guessing a mode.
-         */
-        fun fromId(
-            id: Int,
-            trailLevel: TrailLevel? = null,
-        ): GameMode? = when (id) {
-            FREE_PLAY_ID -> FreePlay
-            TRAILS_ID -> trailLevel?.let(::Trails)
-            else -> null
-        }
-    }
-}
-
-private fun Set<Field>.contains(row: Int, column: Int) =
-    Field(row = row, column = column) in this
 
 @Immutable
 data class GameState(
@@ -126,10 +35,6 @@ data class GameState(
     val isValidPlacement: Boolean = false,
     val errorText: String? = null,
 ) {
-    enum class Alignment {
-        Horizontal, Vertical, Single, Unaligned
-    }
-
     data class JokerCoordinates(val row: Int, val column: Int)
 
     val isJokerSelectorVisible get() = jokerCoordinates != null
@@ -436,34 +341,24 @@ data class GameState(
     )
 }
 
-@Serializable
-data class SavedGame(
-    val gameModeId: Int,
-    val levelIndex: Int,
-    val totalPoints: Long,
-    val stonesInHand: List<StoneInHand>,
-    val stonesOnBoard: Set<StoneOnBoard>,
-    val stonesInBag: Set<StoneInBag>,
-) {
-    /**
-     * The saved game as playable state, or `null` when it names a game mode or level
-     * this build no longer has. Restoring it onto some other level would both show the
-     * wrong board and overwrite that level's own save.
-     */
-    fun asGameState(): GameState? {
-        val gameMode = GameMode.fromId(
-            id = gameModeId,
-            trailLevel = trailLevels.find { it.index == levelIndex },
-        ) ?: return null
+/**
+ * The saved game as playable state, or `null` when it names a game mode or level this
+ * build no longer has. Restoring it onto some other level would both show the wrong
+ * board and overwrite that level's own save.
+ */
+fun SavedGame.asGameState(): GameState? {
+    val gameMode = GameMode.fromId(
+        id = gameModeId,
+        trailLevel = trailLevels.find { it.index == levelIndex },
+    ) ?: return null
 
-        return GameState(
-            gameMode = gameMode,
-            totalPoints = totalPoints,
-            stonesInHand = stonesInHand,
-            stonesOnBoard = stonesOnBoard,
-            stonesInBag = stonesInBag,
-        )
-    }
+    return GameState(
+        gameMode = gameMode,
+        totalPoints = totalPoints,
+        stonesInHand = stonesInHand,
+        stonesOnBoard = stonesOnBoard,
+        stonesInBag = stonesInBag,
+    )
 }
 
 sealed interface GameEvent {
@@ -484,57 +379,3 @@ sealed interface GameEvent {
     data object JokerSelectorDismissRequested : GameEvent
     data object ClearGameStateClick : GameEvent
 }
-
-data class LetterProperties(
-    val value: Int,
-    val frequency: Int,
-)
-
-val letterPropertiesMap = mapOf(
-    'A' to LetterProperties(frequency = 10, value = 1),
-    'Ä' to LetterProperties(frequency = 1, value = 6),
-    'B' to LetterProperties(frequency = 2, value = 3),
-    'C' to LetterProperties(frequency = 2, value = 4),
-    'D' to LetterProperties(frequency = 4, value = 1),
-    'E' to LetterProperties(frequency = 15, value = 1),
-    'F' to LetterProperties(frequency = 2, value = 4),
-    'G' to LetterProperties(frequency = 3, value = 2),
-    'H' to LetterProperties(frequency = 2, value = 4),
-    'I' to LetterProperties(frequency = 6, value = 1),
-    'J' to LetterProperties(frequency = 1, value = 10),
-    'K' to LetterProperties(frequency = 4, value = 2),
-    'L' to LetterProperties(frequency = 4, value = 1),
-    'M' to LetterProperties(frequency = 3, value = 3),
-    'N' to LetterProperties(frequency = 6, value = 1),
-    'O' to LetterProperties(frequency = 4, value = 1),
-    'Ö' to LetterProperties(frequency = 1, value = 8),
-    'P' to LetterProperties(frequency = 2, value = 4),
-    'Q' to LetterProperties(frequency = 1, value = 10),
-    'R' to LetterProperties(frequency = 6, value = 1),
-    'S' to LetterProperties(frequency = 6, value = 1),
-    'T' to LetterProperties(frequency = 6, value = 1),
-    'U' to LetterProperties(frequency = 4, value = 1),
-    'Ü' to LetterProperties(frequency = 1, value = 6),
-    'V' to LetterProperties(frequency = 2, value = 6),
-    'W' to LetterProperties(frequency = 2, value = 3),
-    'X' to LetterProperties(frequency = 1, value = 10),
-    'Y' to LetterProperties(frequency = 1, value = 10),
-    'Z' to LetterProperties(frequency = 2, value = 3),
-    ' ' to LetterProperties(frequency = 2, value = 0)
-)
-
-val initialStonesInBag: Set<StoneInBag> =
-    letterPropertiesMap.flatMap { (letter, properties) ->
-        List(properties.frequency) {
-            StoneInBag(
-                letter = letter,
-                value = properties.value,
-                id = UUID.randomUUID().toString()
-            )
-        }
-    }.toSet()
-
-val germanAlphabet = letterPropertiesMap.keys.filter { !it.isWhitespace() }
-
-val List<StoneOnBoard>.areHorizontallyAligned: Boolean get() = map { it.rowIndex }.toSet().size == 1
-val List<StoneOnBoard>.areVerticallyAligned: Boolean get() = map { it.columnIndex }.toSet().size == 1

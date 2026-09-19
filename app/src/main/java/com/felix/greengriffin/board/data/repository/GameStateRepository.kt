@@ -3,7 +3,7 @@ package com.felix.greengriffin.board.data.repository
 import com.felix.greengriffin.board.data.local.GameStateDao
 import com.felix.greengriffin.board.data.mapper.toEntity
 import com.felix.greengriffin.board.data.mapper.toSavedGame
-import com.felix.greengriffin.board.presentation.SavedGame
+import com.felix.greengriffin.board.domain.model.SavedGame
 import javax.inject.Inject
 import javax.inject.Singleton
 

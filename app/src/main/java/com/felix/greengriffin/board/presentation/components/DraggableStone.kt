@@ -1,7 +1,5 @@
 package com.felix.greengriffin.board.presentation.components
 
-import android.content.ClipData
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.draganddrop.dragAndDropSource
@@ -28,108 +26,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.felix.greengriffin.board.presentation.Field
+import com.felix.greengriffin.board.domain.model.StoneData
+import com.felix.greengriffin.board.domain.model.StoneInBag
+import com.felix.greengriffin.board.domain.model.StoneInHand
+import com.felix.greengriffin.board.domain.model.StoneOnBoard
 import com.felix.greengriffin.core.presentation.theme.GreenGriffinTheme
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-
-data class Word(
-    val letters: List<StoneData>,
-) {
-    val points get() = letters.sumOf { it.value }
-    val asString get() = letters.map { it.letter }.joinToString("")
-}
-
-fun List<StoneData>.asWord() = Word(letters = this)
-
-
-@Serializable
-sealed class StoneData {
-    abstract val letter: Char
-    abstract val value: Int
-    abstract val id: String
-    val isJoker get() = letter == ' ' && value == 0
-
-    fun asClipData(): ClipData =
-        ClipData.newPlainText("${letter}_$value", Json.encodeToString(this))
-
-    companion object {
-        fun fromClipData(clipData: ClipData): StoneData? = try {
-            Json.decodeFromString<StoneData>(clipData.getItemAt(0).text.toString())
-        } catch (e: Exception) {
-            Log.w("StoneData", "Failed to parse dragged stone", e)
-            null
-        }
-    }
-}
-
-@Serializable
-data class StoneInBag(
-    override val letter: Char,
-    override val value: Int,
-    override val id: String,
-) : StoneData() {
-
-    fun toStoneInHand(userId: Int) = StoneInHand(
-        letter = letter,
-        value = value,
-        id = id,
-        userId = userId,
-    )
-}
-
-@Serializable
-data class StoneInHand(
-    override val letter: Char,
-    override val value: Int,
-    override val id: String,
-    val userId: Int,
-) : StoneData() {
-
-    fun toStoneOnBoard(rowIndex: Int, columnIndex: Int) = StoneOnBoard(
-        letter = letter,
-        value = value,
-        id = id,
-        rowIndex = rowIndex,
-        columnIndex = columnIndex,
-        isLocked = false
-    )
-}
-
-@Serializable
-data class StoneOnBoard(
-    override val letter: Char,
-    override val value: Int,
-    override val id: String,
-    val rowIndex: Int,
-    val columnIndex: Int,
-    val isLocked: Boolean,
-) : StoneData() {
-
-    fun toStoneInHand(userId: Int) = StoneInHand(
-        letter = letter,
-        value = value,
-        id = id,
-        userId = userId,
-    )
-
-    fun toField() = Field(
-        row = rowIndex,
-        column = columnIndex,
-    )
-
-    fun isToLeftOf(other: StoneOnBoard) =
-        columnIndex == other.columnIndex - 1 && rowIndex == other.rowIndex
-
-    fun isAbove(other: StoneOnBoard) =
-        columnIndex == other.columnIndex && rowIndex == other.rowIndex - 1
-
-    fun isToRightOf(other: StoneOnBoard) =
-        columnIndex == other.columnIndex + 1 && rowIndex == other.rowIndex
-
-    fun isBelow(other: StoneOnBoard) =
-        columnIndex == other.columnIndex && rowIndex == other.rowIndex + 1
-}
 
 @Composable
 fun DraggableStone(
