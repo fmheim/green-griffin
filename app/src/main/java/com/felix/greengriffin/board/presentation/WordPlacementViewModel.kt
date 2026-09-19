@@ -9,8 +9,10 @@ import com.felix.greengriffin.board.data.repository.GameStateRepository
 import com.felix.greengriffin.board.domain.model.GameMode
 import com.felix.greengriffin.board.domain.model.StoneData
 import com.felix.greengriffin.board.domain.model.StoneInHand
+import com.felix.greengriffin.board.domain.model.Word
 import com.felix.greengriffin.board.domain.model.initialStonesInBag
 import com.felix.greengriffin.board.domain.usecase.AreWordsValidUseCase
+import com.felix.greengriffin.board.domain.usecase.FindNewlyCreatedWordsUseCase
 import com.felix.greengriffin.board.domain.usecase.GameModeViolation.FirstWordNotOnCorrectStartPosition
 import com.felix.greengriffin.board.domain.usecase.GameModeViolation.PlacedOnBlockedField
 import com.felix.greengriffin.board.domain.usecase.IsPlacementValidUseCase
@@ -36,6 +38,7 @@ import kotlinx.coroutines.launch
 class WordPlacementViewModel @AssistedInject constructor(
     private val areWordsValid: AreWordsValidUseCase,
     private val isPlacementValid: IsPlacementValidUseCase,
+    private val findNewlyCreatedWords: FindNewlyCreatedWordsUseCase,
     private val completeTrailLevelIfGoalReached: CompleteTrailLevelIfGoalReachedUseCase,
     private val gameStateRepository: GameStateRepository,
     private val completedLevelsRepository: CompletedLevelsRepository,
@@ -160,7 +163,12 @@ class WordPlacementViewModel @AssistedInject constructor(
             currentState
                 .moveAllUnlockedStonesToHand()
                 .clearEnteredField()
-                .copy(isValidPlacement = false, isCurrentWordValid = null, errorText = null)
+                .copy(
+                    isValidPlacement = false,
+                    isCurrentWordValid = null,
+                    newlyCreatedWords = emptyList(),
+                    errorText = null,
+                )
         }
         saveGameState()
     }
@@ -232,18 +240,30 @@ class WordPlacementViewModel @AssistedInject constructor(
         saveGameState()
     }
 
+    /**
+     * Judges the placement on the board and reads the words it forms, in one pass.
+     *
+     * Both verdicts are written into the state together so the screen can read the score
+     * instead of extracting the words again on every recomposition.
+     */
     private fun revalidatePlacement() {
+        val stonesOnBoard = _state.value.stonesOnBoard
         val placementValidation = isPlacementValid(
-            stonesOnBoard = _state.value.stonesOnBoard,
+            stonesOnBoard = stonesOnBoard,
             gameMode = _state.value.gameMode,
         )
         val isValidPlacement = placementValidation is PlacementValidation.Valid
+        val newlyCreatedWords = findNewlyCreatedWords(stonesOnBoard = stonesOnBoard)
 
-        _state.update { it.copy(isValidPlacement = isValidPlacement) }
+        _state.update {
+            it.copy(
+                isValidPlacement = isValidPlacement,
+                newlyCreatedWords = newlyCreatedWords,
+            )
+        }
 
         if (isValidPlacement) {
-            val words = _state.value.newlyCreatedWordsAsStrings
-            validateWords(words)
+            validateWords(newlyCreatedWords.map(Word::asString))
         }
         setErrorText(placementValidation)
     }
@@ -268,7 +288,12 @@ class WordPlacementViewModel @AssistedInject constructor(
             currentState
                 .moveStoneToHand(stoneData)
                 .clearEnteredField()
-                .copy(isValidPlacement = false, isCurrentWordValid = null, errorText = null)
+                .copy(
+                    isValidPlacement = false,
+                    isCurrentWordValid = null,
+                    newlyCreatedWords = emptyList(),
+                    errorText = null,
+                )
         }
         saveGameState()
     }

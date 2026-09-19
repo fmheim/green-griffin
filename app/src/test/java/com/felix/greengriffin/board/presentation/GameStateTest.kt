@@ -3,6 +3,7 @@ package com.felix.greengriffin.board.presentation
 import com.felix.greengriffin.board.domain.model.StoneInHand
 import com.felix.greengriffin.board.domain.model.StoneOnBoard
 import com.felix.greengriffin.board.domain.model.initialStonesInBag
+import com.felix.greengriffin.board.domain.usecase.FindNewlyCreatedWordsUseCase
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -63,17 +64,22 @@ class GameStateTest {
 
     @Test
     fun `locking in a word scores it and locks every stone`() {
+        val stonesOnBoard = setOf(
+            StoneOnBoard('A', 3, "a", 0, 0, false),
+            StoneOnBoard('B', 4, "b", 0, 1, false),
+        )
+        // The score of the pending placement is computed once, where the board changes,
+        // and carried in the state; this is how the ViewModel fills it in.
         val state = GameState(
-            stonesOnBoard = setOf(
-                StoneOnBoard('A', 3, "a", 0, 0, false),
-                StoneOnBoard('B', 4, "b", 0, 1, false),
-            ),
+            stonesOnBoard = stonesOnBoard,
+            newlyCreatedWords = FindNewlyCreatedWordsUseCase()(stonesOnBoard),
         )
 
         val locked = state.lockInWord()
 
         assertEquals(7L, locked.totalPoints)
         assertTrue(locked.stonesOnBoard.all { it.isLocked })
+        assertTrue("the locked-in word is no longer pending", locked.newlyCreatedWords.isEmpty())
     }
 
     @Test

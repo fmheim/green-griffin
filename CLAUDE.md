@@ -37,7 +37,7 @@ com.felix.greengriffin/
 │   ├── data/mapper/
 │   ├── data/repository/   # LocalWordRepository, GameStateRepository, CompletedLevelsRepository
 │   ├── domain/            # WordRepository interface
-│   ├── domain/usecase/    # AreWordsValidUseCase, IsPlacementValidUseCase
+│   ├── domain/usecase/    # AreWordsValidUseCase, IsPlacementValidUseCase, FindNewlyCreatedWordsUseCase
 │   └── presentation/      # WordPlacementScreen/ViewModel, GameState, GameEvent, components/
 ├── trails/
 │   ├── domain/usecase/

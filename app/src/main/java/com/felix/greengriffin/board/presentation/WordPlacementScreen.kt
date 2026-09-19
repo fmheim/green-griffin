@@ -70,6 +70,7 @@ import com.felix.greengriffin.board.domain.model.StoneData
 import com.felix.greengriffin.board.domain.model.StoneInBag
 import com.felix.greengriffin.board.domain.model.StoneInHand
 import com.felix.greengriffin.board.domain.model.StoneOnBoard
+import com.felix.greengriffin.board.domain.usecase.FindNewlyCreatedWordsUseCase
 import com.felix.greengriffin.board.presentation.GameEvent.StoneDroppedOnBoard
 import com.felix.greengriffin.board.presentation.components.DraggableStone
 import com.felix.greengriffin.board.presentation.components.StoneSelector
@@ -474,4 +475,7 @@ val previewGameState = GameState(
         StoneInBag(letter = 'X', value = 8, id = "stone16")
     ),
     currentUserId = 1
-)
+).let { state ->
+    // The words are state now, so the preview has to fill them to show a score.
+    state.copy(newlyCreatedWords = FindNewlyCreatedWordsUseCase()(state.stonesOnBoard))
+}

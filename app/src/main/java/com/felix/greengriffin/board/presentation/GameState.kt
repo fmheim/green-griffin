@@ -1,7 +1,6 @@
 package com.felix.greengriffin.board.presentation
 
 import androidx.compose.runtime.Immutable
-import com.felix.greengriffin.board.domain.model.Alignment
 import com.felix.greengriffin.board.domain.model.GameMode
 import com.felix.greengriffin.board.domain.model.SavedGame
 import com.felix.greengriffin.board.domain.model.StoneData
@@ -9,9 +8,6 @@ import com.felix.greengriffin.board.domain.model.StoneInBag
 import com.felix.greengriffin.board.domain.model.StoneInHand
 import com.felix.greengriffin.board.domain.model.StoneOnBoard
 import com.felix.greengriffin.board.domain.model.Word
-import com.felix.greengriffin.board.domain.model.areHorizontallyAligned
-import com.felix.greengriffin.board.domain.model.areVerticallyAligned
-import com.felix.greengriffin.board.domain.model.asWord
 import com.felix.greengriffin.trails.domain.model.trailLevels
 
 const val DEFAULT_BOARD_SIZE = 10
@@ -33,11 +29,19 @@ data class GameState(
     val jokerCoordinates: JokerCoordinates? = null,
     private val isCurrentWordValid: Boolean? = null,
     val isValidPlacement: Boolean = false,
+    /**
+     * The words the current placement forms, computed by the ViewModel whenever the board
+     * changes. Derived rather than computed on read, so that composition can read the
+     * score without re-running word extraction.
+     */
+    val newlyCreatedWords: List<Word> = emptyList(),
     val errorText: String? = null,
 ) {
     data class JokerCoordinates(val row: Int, val column: Int)
 
     val isJokerSelectorVisible get() = jokerCoordinates != null
+
+    val pointsOfCurrentPlacement: Int = newlyCreatedWords.sumOf(Word::points)
 
     val boardSize
         get() = if (gameMode is GameMode.Trails) {
@@ -48,33 +52,6 @@ data class GameState(
 
     val currentUserStonesInHand get() = stonesInHand.filter { it.userId == currentUserId }
     private val unlockedStonesOnBoard get() = stonesOnBoard.filterNot(StoneOnBoard::isLocked)
-    private val unlockedStonesAlignment
-        get() = when {
-            unlockedStonesOnBoard.size == 1 -> Alignment.Single
-            unlockedStonesOnBoard.areHorizontallyAligned -> Alignment.Horizontal
-            unlockedStonesOnBoard.areVerticallyAligned -> Alignment.Vertical
-            else -> Alignment.Unaligned
-        }
-    private val sortedUnlockedStonesOnBoard
-        get() = when (unlockedStonesAlignment) {
-            Alignment.Horizontal -> unlockedStonesOnBoard.sortedBy(StoneOnBoard::columnIndex)
-            Alignment.Vertical -> unlockedStonesOnBoard.sortedBy(StoneOnBoard::rowIndex)
-            else -> unlockedStonesOnBoard
-        }
-
-    private fun hasVerticalConnection(stone: StoneOnBoard): Boolean =
-        stonesOnBoard.any { lockedStone ->
-            lockedStone.isLocked &&
-                    lockedStone.columnIndex == stone.columnIndex &&
-                    (lockedStone.isAbove(stone) || lockedStone.isBelow(stone))
-        }
-
-    private fun hasHorizontalConnection(stone: StoneOnBoard): Boolean =
-        stonesOnBoard.any { lockedStone ->
-            lockedStone.isLocked &&
-                    lockedStone.rowIndex == stone.rowIndex &&
-                    (lockedStone.isToLeftOf(stone) || lockedStone.isToRightOf(stone))
-        }
 
     fun isPositionOnBoardAvailable(columnIndex: Int, rowIndex: Int) = stonesOnBoard.none {
         it.columnIndex == columnIndex
@@ -105,182 +82,14 @@ data class GameState(
     fun lockInWord(): GameState {
         return copy(
             totalPoints = totalPoints + pointsOfCurrentPlacement,
-            stonesOnBoard = stonesOnBoard.map { it.copy(isLocked = true) }.toSet()
+            stonesOnBoard = stonesOnBoard.map { it.copy(isLocked = true) }.toSet(),
+            // Nothing is newly placed any more, so there is no pending word to score.
+            newlyCreatedWords = emptyList(),
         )
-    }
-
-    private val newlyCreatedWords: List<Word>
-        get() {
-            if (sortedUnlockedStonesOnBoard.isEmpty()) return emptyList()
-
-            return when (unlockedStonesAlignment) {
-                Alignment.Horizontal -> getWordsFromHorizontalPlacement()
-                Alignment.Vertical -> getWordsFromVerticalPlacement()
-                Alignment.Single -> getWordsFromSinglePlacement()
-                else -> emptyList()
-            }
-        }
-
-    val newlyCreatedWordsAsStrings: List<String> get() = newlyCreatedWords.map { it.asString }
-
-    val pointsOfCurrentPlacement: Int get() = newlyCreatedWords.sumOf { it.points }
-
-    private fun getWordsFromSinglePlacement(): List<Word> {
-        val createdWords = mutableListOf<Word>()
-        val singleStone = sortedUnlockedStonesOnBoard.first()
-
-        // Check for horizontal word
-        if (hasHorizontalConnection(singleStone)) {
-            val horizontalWord = createHorizontalWordAt(singleStone)
-            createdWords.add(horizontalWord)
-        }
-
-        // Check for vertical word
-        if (hasVerticalConnection(singleStone)) {
-            val verticalWord = createVerticalWordAt(singleStone)
-            createdWords.add(verticalWord)
-        }
-
-        return createdWords
     }
 
     val hasError: Boolean
         get() = errorText != null
-
-    private fun getWordsFromHorizontalPlacement(): List<Word> {
-        val createdWords = mutableListOf<Word>()
-        val mainWord = getMainHorizontalWord()
-        createdWords.add(mainWord)
-        createdWords.addAll(getPerpendicularWordsFromHorizontalPlacement())
-        return createdWords
-    }
-
-    private fun getWordsFromVerticalPlacement(): List<Word> {
-        val createdWords = mutableListOf<Word>()
-        val mainWord = getMainVerticalWord()
-        createdWords.add(mainWord)
-        createdWords.addAll(getPerpendicularWordsFromVerticalPlacement())
-        return createdWords
-    }
-
-    private fun getPerpendicularWordsFromHorizontalPlacement(): List<Word> {
-        val perpendicularWords = mutableListOf<Word>()
-
-        unlockedStonesOnBoard.forEach { unlockedStone ->
-            if (hasVerticalConnection(unlockedStone)) {
-                val verticalWord = createVerticalWordAt(unlockedStone)
-                perpendicularWords.add(verticalWord)
-            }
-        }
-
-        return perpendicularWords
-    }
-
-    private fun getPerpendicularWordsFromVerticalPlacement(): List<Word> {
-        val perpendicularWords = mutableListOf<Word>()
-
-        unlockedStonesOnBoard.forEach { unlockedStone ->
-            if (hasHorizontalConnection(unlockedStone)) {
-                val horizontalWord = createHorizontalWordAt(unlockedStone)
-                perpendicularWords.add(horizontalWord)
-            }
-        }
-
-        return perpendicularWords
-    }
-
-    private fun getMainHorizontalWord(): Word {
-        val firstUnlockedStone = sortedUnlockedStonesOnBoard.first()
-        val firstStoneColumnIndex = findIndexOfFirstLetterOfHorizontalWord(
-            firstUnlockedStone.columnIndex,
-            firstUnlockedStone.rowIndex
-        )
-        val lastStoneColumnIndex = findIndexOfLastLetterOfHorizontalWord(
-            firstUnlockedStone.columnIndex,
-            firstUnlockedStone.rowIndex
-        )
-
-        return (firstStoneColumnIndex..lastStoneColumnIndex)
-            .mapNotNull { columnIndex ->
-                stonesOnBoard.find { it.columnIndex == columnIndex && it.rowIndex == firstUnlockedStone.rowIndex }
-            }.asWord()
-    }
-
-    private fun getMainVerticalWord(): Word {
-        val firstUnlockedStone = sortedUnlockedStonesOnBoard.first()
-        val firstStoneRowIndex = findIndexOfFirstLetterOfVerticalWord(
-            firstUnlockedStone.columnIndex,
-            firstUnlockedStone.rowIndex
-        )
-        val lastStoneRowIndex = findIndexOfLastLetterOfVerticalWord(
-            firstUnlockedStone.columnIndex,
-            firstUnlockedStone.rowIndex
-        )
-
-        return (firstStoneRowIndex..lastStoneRowIndex)
-            .mapNotNull { rowIndex ->
-                stonesOnBoard.find { it.columnIndex == firstUnlockedStone.columnIndex && it.rowIndex == rowIndex }
-            }
-            .asWord()
-    }
-
-    private fun createVerticalWordAt(stone: StoneOnBoard): Word {
-        val firstVerticalIndex =
-            findIndexOfFirstLetterOfVerticalWord(stone.columnIndex, stone.rowIndex)
-        val lastVerticalIndex =
-            findIndexOfLastLetterOfVerticalWord(stone.columnIndex, stone.rowIndex)
-
-        return (firstVerticalIndex..lastVerticalIndex)
-            .mapNotNull { rowIndex ->
-                stonesOnBoard.find { it.columnIndex == stone.columnIndex && it.rowIndex == rowIndex }
-            }
-            .asWord()
-    }
-
-    private fun createHorizontalWordAt(stone: StoneOnBoard): Word {
-        val firstHorizontalIndex =
-            findIndexOfFirstLetterOfHorizontalWord(stone.columnIndex, stone.rowIndex)
-        val lastHorizontalIndex =
-            findIndexOfLastLetterOfHorizontalWord(stone.columnIndex, stone.rowIndex)
-
-        return (firstHorizontalIndex..lastHorizontalIndex)
-            .mapNotNull { columnIndex ->
-                stonesOnBoard.find { it.columnIndex == columnIndex && it.rowIndex == stone.rowIndex }
-            }
-            .asWord()
-    }
-
-    private fun findIndexOfFirstLetterOfHorizontalWord(startColumn: Int, rowIndex: Int): Int {
-        val columnIndexes = stonesOnBoard.associateBy { it.columnIndex to it.rowIndex }
-
-        return generateSequence(startColumn) { it - 1 }
-            .takeWhile { (it to rowIndex) in columnIndexes }
-            .last()
-    }
-
-    private fun findIndexOfLastLetterOfHorizontalWord(startColumn: Int, rowIndex: Int): Int {
-        val columnIndexes = stonesOnBoard.associateBy { it.columnIndex to it.rowIndex }
-
-        return generateSequence(startColumn) { it + 1 }
-            .takeWhile { (it to rowIndex) in columnIndexes }
-            .last()
-    }
-
-    private fun findIndexOfFirstLetterOfVerticalWord(columnIndex: Int, startRow: Int): Int {
-        val rowIndexes = stonesOnBoard.associateBy { it.columnIndex to it.rowIndex }
-
-        return generateSequence(startRow) { it - 1 }
-            .takeWhile { (columnIndex to it) in rowIndexes }
-            .last()
-    }
-
-    private fun findIndexOfLastLetterOfVerticalWord(columnIndex: Int, startRow: Int): Int {
-        val rowIndexes = stonesOnBoard.associateBy { it.columnIndex to it.rowIndex }
-
-        return generateSequence(startRow) { it + 1 }
-            .takeWhile { (columnIndex to it) in rowIndexes }
-            .last()
-    }
 
     fun moveStoneToHand(stone: StoneData): GameState {
         val movedStone = when (stone) {
