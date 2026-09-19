@@ -74,4 +74,40 @@ class GameStateTest {
         assertEquals(7L, locked.totalPoints)
         assertTrue(locked.stonesOnBoard.all { it.isLocked })
     }
+
+    @Test
+    fun `a full hand draws nothing`() {
+        val state = GameState(
+            stonesInHand = List(HAND_SIZE) { inHand('A', id = "a$it") },
+            stonesInBag = initialStonesInBag,
+        )
+
+        assertEquals(0, state.numberOfStonesToDraw)
+    }
+
+    @Test
+    fun `an over-full hand never asks for a negative number of stones`() {
+        val state = GameState(
+            stonesInHand = List(HAND_SIZE + 2) { inHand('A', id = "a$it") },
+            stonesInBag = initialStonesInBag,
+        )
+
+        assertEquals(0, state.numberOfStonesToDraw)
+        // `List.take` throws on a negative count, which is how this used to surface.
+        assertEquals(0, state.stonesInBag.take(state.numberOfStonesToDraw).size)
+    }
+
+    @Test
+    fun `an empty hand draws a full hand`() {
+        val state = GameState(stonesInBag = initialStonesInBag)
+
+        assertEquals(HAND_SIZE, state.numberOfStonesToDraw)
+    }
+
+    @Test
+    fun `a nearly empty bag only offers what is left`() {
+        val state = GameState(stonesInBag = initialStonesInBag.take(3).toSet())
+
+        assertEquals(3, state.numberOfStonesToDraw)
+    }
 }

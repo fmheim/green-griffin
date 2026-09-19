@@ -12,6 +12,9 @@ import java.util.UUID
 
 const val DEFAULT_BOARD_SIZE = 10
 
+/** Number of stones a player holds when their hand is full. */
+const val HAND_SIZE = 7
+
 @Serializable
 data class Field(
     val row: Int,
@@ -200,11 +203,10 @@ data class GameState(
 
     val numberOfStonesToDraw: Int
         get() {
-            val missingToFull = 7 - stonesInHand.size
-            return when {
-                stonesInBag.size >= missingToFull -> missingToFull
-                else -> stonesInBag.size
-            }
+            // A hand can only ever be over-full through a bug elsewhere, but it must not
+            // turn into a negative draw count and throw out of `take()`.
+            val missingToFull = (HAND_SIZE - stonesInHand.size).coerceAtLeast(0)
+            return minOf(missingToFull, stonesInBag.size)
         }
 
     val isAbleToSubmit: Boolean
@@ -213,7 +215,9 @@ data class GameState(
                 && isCurrentWordValid == true
 
     val isAbleToDrawStones: Boolean
-        get() = stonesInBag.isNotEmpty() && stonesInHand.size < 7 && unlockedStonesOnBoard.isEmpty()
+        get() = stonesInBag.isNotEmpty() &&
+                stonesInHand.size < HAND_SIZE &&
+                unlockedStonesOnBoard.isEmpty()
 
     val hasUnlockedStones: Boolean
         get() = unlockedStonesOnBoard.isNotEmpty()
