@@ -8,6 +8,7 @@ import com.felix.greengriffin.board.data.repository.CompletedLevelsRepository
 import com.felix.greengriffin.board.data.repository.GameStateRepository
 import com.felix.greengriffin.board.domain.usecase.AreWordsValidUseCase
 import com.felix.greengriffin.board.domain.usecase.GameModeViolation.FirstWordNotOnCorrectStartPosition
+import com.felix.greengriffin.board.domain.usecase.GameModeViolation.PlacedOnBlockedField
 import com.felix.greengriffin.board.domain.usecase.IsPlacementValidUseCase
 import com.felix.greengriffin.board.domain.usecase.PlacementValidation
 import com.felix.greengriffin.board.domain.usecase.WordValidation.Valid
@@ -20,12 +21,13 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 
 @HiltViewModel(assistedFactory = WordPlacementViewModel.Factory::class)
@@ -47,18 +49,27 @@ class WordPlacementViewModel @AssistedInject constructor(
     private val _state = MutableStateFlow(value = GameState(gameMode = navKey.gameMode))
     val state: StateFlow<GameState> = _state.asStateFlow()
 
+    /** Dictionary lookup for the placement currently on the board. */
+    private var wordValidationJob: Job? = null
+
 
     init {
-        viewModelScope.launch {
-            loadInitialGameState()
-            observeLevelCompletion()
-        }
+        // Separate coroutines: observing completion must not depend on the one-shot load
+        // succeeding, and `observeLevelCompletion` never returns.
+        viewModelScope.launch { loadInitialGameState() }
+        viewModelScope.launch { observeLevelCompletion() }
     }
 
     private suspend fun loadInitialGameState() {
         val savedState = loadSavedState()
         when {
-            savedState != null -> _state.update { savedState }
+            savedState != null -> {
+                _state.update { savedState }
+                // Whether the restored placement is valid is derived state and is
+                // deliberately not persisted, so it has to be recomputed here.
+                if (savedState.hasUnlockedStones) revalidatePlacement()
+            }
+
             else -> initializeNewGame()
         }
     }
@@ -67,10 +78,7 @@ class WordPlacementViewModel @AssistedInject constructor(
         val initialState = _state.value
         val savedState = gameStateRepository.loadGameState(
             gameModeId = initialState.gameMode.id,
-            level = when (initialState.gameMode) {
-                is GameMode.Trails -> initialState.gameMode.level.index
-                else -> -1
-            }
+            level = initialState.gameMode.levelKey,
         )?.asGameState()
         return savedState
     }
@@ -122,17 +130,20 @@ class WordPlacementViewModel @AssistedInject constructor(
     }
 
     private fun onJokerSelected(letter: Char) {
+        val currentState = _state.value
+        // Without a pending joker there is nothing to turn into a letter, and without a
+        // blank in hand there is nothing to pay with.
+        val coordinates = currentState.jokerCoordinates ?: return
+        val blank = currentState.stonesInHand.firstOrNull(StoneInHand::isJoker)
+        if (blank == null) {
+            dismissJokerSelector()
+            return
+        }
+
         moveStoneToBoard(
-            stoneData = StoneInHand(
-                letter = letter,
-                value = 0,
-                id = UUID.randomUUID().toString(),
-                userId = 1
-            ),
-            rowIndex = _state.value.jokerCoordinates?.row
-                ?: _state.value.firstEmptyCoordinates.row,
-            columnIndex = _state.value.jokerCoordinates?.column
-                ?: _state.value.firstEmptyCoordinates.column
+            stoneData = blank.copy(letter = letter),
+            rowIndex = coordinates.row,
+            columnIndex = coordinates.column,
         )
         dismissJokerSelector()
     }
@@ -147,7 +158,7 @@ class WordPlacementViewModel @AssistedInject constructor(
             currentState
                 .moveAllUnlockedStonesToHand()
                 .clearEnteredField()
-                .copy(isValidPlacement = false, isCurrentWordValid = null)
+                .copy(isValidPlacement = false, isCurrentWordValid = null, errorText = null)
         }
         saveGameState()
     }
@@ -165,7 +176,7 @@ class WordPlacementViewModel @AssistedInject constructor(
         saveGameState()
     }
 
-    private fun maybeCompleteLevel() {
+    private fun completeLevelIfGoalReached() {
         when (val gameMode = _state.value.gameMode) {
             GameMode.FreePlay -> Unit
             is GameMode.Trails -> {
@@ -186,8 +197,6 @@ class WordPlacementViewModel @AssistedInject constructor(
         rowIndex: Int,
         columnIndex: Int,
     ) {
-        println("StoneDroppedOnBoard")
-
         if (stoneData.isJoker) {
             _state.update {
                 it.copy(
@@ -208,6 +217,8 @@ class WordPlacementViewModel @AssistedInject constructor(
                     rowIndex = rowIndex,
                     columnIndex = columnIndex
                 )
+                // The drag is over, so the hover highlight has to go with it.
+                .clearEnteredField()
         }
 
         onStoneMovedToBoard()
@@ -215,6 +226,11 @@ class WordPlacementViewModel @AssistedInject constructor(
     }
 
     private fun onStoneMovedToBoard() {
+        revalidatePlacement()
+        saveGameState()
+    }
+
+    private fun revalidatePlacement() {
         val placementValidation = isPlacementValid(
             stonesOnBoard = _state.value.stonesOnBoard,
             gameMode = _state.value.gameMode,
@@ -222,7 +238,6 @@ class WordPlacementViewModel @AssistedInject constructor(
         val isValidPlacement = placementValidation is PlacementValidation.Valid
 
         _state.update { it.copy(isValidPlacement = isValidPlacement) }
-        saveGameState()
 
         if (isValidPlacement) {
             val words = _state.value.newlyCreatedWordsAsStrings
@@ -240,50 +255,54 @@ class WordPlacementViewModel @AssistedInject constructor(
             PlacementValidation.Valid -> null
             is PlacementValidation.Violation -> when (placementValidation.gameModeViolation) {
                 FirstWordNotOnCorrectStartPosition -> "Start trail on a starting field"
+                PlacedOnBlockedField -> "That field is blocked"
             }
         }
         _state.update { it.copy(errorText = errorText) }
     }
 
     private fun moveStoneToHand(stoneData: StoneData) {
-        println("StoneDroppedOnHand")
         _state.update { currentState ->
             currentState
                 .moveStoneToHand(stoneData)
                 .clearEnteredField()
-                .copy(isValidPlacement = false, isCurrentWordValid = null)
+                .copy(isValidPlacement = false, isCurrentWordValid = null, errorText = null)
         }
         saveGameState()
     }
 
 
     private fun onSubmitClick() {
-        println("SubmitClick")
-        val isValid = _state.value.isAbleToSubmit
-
-        println("isValid: $isValid")
-        if (!isValid) {
-            // show error
-            println("Invalid word placement")
+        val currentState = _state.value
+        if (currentState.isAbleToSubmit) {
+            _state.update { it.lockInWord() }
+            saveGameState()
+            drawStones()
+            completeLevelIfGoalReached()
             return
         }
-        _state.update { it.lockInWord() }
-        saveGameState()
-        drawStones()
-        maybeCompleteLevel()
+
+        // An unusable placement already shows its own message. The one verdict with no
+        // feedback of its own is the dictionary's, so say that out loud.
+        if (currentState.isValidPlacement && !currentState.isPromptLoading) {
+            _state.update { it.copy(errorText = "Not a word") }
+        }
     }
 
     private fun validateWords(words: List<String>) {
         _state.update { it.copy(isPromptLoading = true, isCurrentWordValid = null) }
         saveGameState()
 
-        viewModelScope.launch(Dispatchers.IO) {
+        wordValidationJob?.cancel()
+        wordValidationJob = viewModelScope.launch(Dispatchers.IO) {
             val wordValidation = areWordsValid(
                 words = words,
                 allowedLanguages = listOf("sv", "de") // todo: specify languages from settings
             )
 
-            println("WordValidation: $wordValidation")
+            // The board may have changed while the lookup was running; a result for a
+            // placement that no longer exists must not decide whether this one is valid.
+            ensureActive()
 
             _state.update {
                 it.copy(
@@ -300,7 +319,7 @@ class WordPlacementViewModel @AssistedInject constructor(
             val gameMode = state.value.gameMode
             gameStateRepository.clearGameState(
                 gameModeId = gameMode.id,
-                level = if (gameMode is GameMode.Trails) gameMode.level.index else null
+                level = gameMode.levelKey,
             )
             _state.update {
                 GameState(gameMode = gameMode, stonesInBag = initialStonesInBag)

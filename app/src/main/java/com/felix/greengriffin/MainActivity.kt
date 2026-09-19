@@ -28,7 +28,6 @@ import androidx.navigation3.ui.NavDisplay
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import com.felix.greengriffin.board.presentation.GameMode
 import com.felix.greengriffin.board.presentation.GameMode.FreePlay
-import com.felix.greengriffin.board.presentation.TrailLevel
 import com.felix.greengriffin.board.presentation.WordPlacementScreen
 import com.felix.greengriffin.board.presentation.WordPlacementViewModel
 import com.felix.greengriffin.board.presentation.trailLevels
@@ -132,20 +131,16 @@ class MainActivity : ComponentActivity() {
                                     state = state,
                                     onBack = { backStack.removeLastOrNull() },
                                     onLevelClick = { level ->
-                                        backStack.add(
-                                            RouteToWordPlacementScreen(
-                                                gameMode = GameMode.Trails(
-                                                    level = trailLevels.firstOrNull { it.index == level }
-                                                        ?: TrailLevel(
-                                                            index = 0,
-                                                            boardSize = 10,
-                                                            startFields = setOf(),
-                                                            goalFields = setOf(),
-                                                            blockedField = setOf()
-                                                        )
+                                        // An unknown index has no level to play, so stay put
+                                        // rather than opening a board with no start or goal fields.
+                                        trailLevels.firstOrNull { it.index == level }
+                                            ?.let { trailLevel ->
+                                                backStack.add(
+                                                    RouteToWordPlacementScreen(
+                                                        gameMode = GameMode.Trails(level = trailLevel)
+                                                    )
                                                 )
-                                            )
-                                        )
+                                            }
                                     }
                                 )
                             }

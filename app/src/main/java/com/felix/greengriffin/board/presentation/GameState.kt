@@ -12,6 +12,9 @@ import java.util.UUID
 
 const val DEFAULT_BOARD_SIZE = 10
 
+/** Number of stones a player holds when their hand is full. */
+const val HAND_SIZE = 7
+
 @Serializable
 data class Field(
     val row: Int,
@@ -24,7 +27,7 @@ data class TrailLevel(
     val boardSize: Int,
     val startFields: Set<Field>,
     val goalFields: Set<Field>,
-    val blockedField: Set<Field>,
+    val blockedFields: Set<Field> = emptySet(),
 )
 
 val trailLevels = setOf(
@@ -33,21 +36,18 @@ val trailLevels = setOf(
         boardSize = 10,
         startFields = List(10) { Field(row = it, column = 0) }.toSet(),
         goalFields = List(10) { Field(row = it, column = 9) }.toSet(),
-        blockedField = setOf(),
     ),
     TrailLevel(
         index = 2,
         boardSize = 10,
         startFields = List(10) { Field(row = 0, column = it) }.toSet(),
         goalFields = List(10) { Field(row = 9, column = it) }.toSet(),
-        blockedField = setOf(),
     ),
     TrailLevel(
         index = 3,
         boardSize = 10,
         startFields = List(6) { Field(row = it, column = 0) }.toSet(),
-        goalFields = List(6) { Field(row = it + 5, column = 9) }.toSet(),
-        blockedField = setOf(),
+        goalFields = List(6) { Field(row = it + 4, column = 9) }.toSet(),
     ),
 
 )
@@ -56,10 +56,16 @@ val trailLevels = setOf(
 sealed interface GameMode {
     val id: Int
 
+    /** Identifies the saved game of this mode. Modes without levels use [NO_LEVEL]. */
+    val levelKey: Int
+
     @Serializable
     data object FreePlay : GameMode {
         override val id: Int
             get() = FREE_PLAY_ID
+
+        override val levelKey: Int
+            get() = NO_LEVEL
     }
 
     @Serializable
@@ -67,6 +73,9 @@ sealed interface GameMode {
 
         override val id: Int
             get() = TRAILS_ID
+
+        override val levelKey: Int
+            get() = level.index
 
         fun isStartField(row: Int, column: Int) =
             level.startFields.contains(row = row, column = column)
@@ -80,20 +89,20 @@ sealed interface GameMode {
     companion object {
         const val FREE_PLAY_ID = 1
         const val TRAILS_ID = 2
+
+        /** Level key of a game mode that has no levels. Persisted, so it must not change. */
+        const val NO_LEVEL = -1
+        /**
+         * The mode a persisted id refers to, or `null` when it refers to nothing this
+         * build knows about. Callers discard such data instead of guessing a mode.
+         */
         fun fromId(
             id: Int,
             trailLevel: TrailLevel? = null,
-        ): GameMode = when (id) {
+        ): GameMode? = when (id) {
             FREE_PLAY_ID -> FreePlay
-            TRAILS_ID -> {
-                if (trailLevel != null) {
-                    Trails(trailLevel)
-                } else {
-                    Trails(trailLevels.first())
-                }
-            }
-
-            else -> error("Unknown GameMode id: $id, level: $trailLevel")
+            TRAILS_ID -> trailLevel?.let(::Trails)
+            else -> null
         }
     }
 }
@@ -130,25 +139,6 @@ data class GameState(
             gameMode.level.boardSize
         } else {
             DEFAULT_BOARD_SIZE
-        }
-
-    val firstEmptyCoordinates: JokerCoordinates
-        get() {
-            val lastColumn =
-                stonesOnBoard.maxOfOrNull { it.columnIndex } ?: return JokerCoordinates(0, 0)
-            val lastRow = stonesOnBoard.maxOfOrNull { it.rowIndex } ?: return JokerCoordinates(0, 0)
-            val occupied = stonesOnBoard
-                .map { it.columnIndex to it.rowIndex }
-                .toSet()
-
-            for (col in 0..lastColumn) {
-                for (row in 0..lastRow) {
-                    if (Pair(col, row) !in occupied) {
-                        return JokerCoordinates(row, col)
-                    }
-                }
-            }
-            return JokerCoordinates(0, 0)
         }
 
     val currentUserStonesInHand get() = stonesInHand.filter { it.userId == currentUserId }
@@ -188,11 +178,10 @@ data class GameState(
 
     val numberOfStonesToDraw: Int
         get() {
-            val missingToFull = 7 - stonesInHand.size
-            return when {
-                stonesInBag.size >= missingToFull -> missingToFull
-                else -> stonesInBag.size
-            }
+            // A hand can only ever be over-full through a bug elsewhere, but it must not
+            // turn into a negative draw count and throw out of `take()`.
+            val missingToFull = (HAND_SIZE - stonesInHand.size).coerceAtLeast(0)
+            return minOf(missingToFull, stonesInBag.size)
         }
 
     val isAbleToSubmit: Boolean
@@ -201,7 +190,9 @@ data class GameState(
                 && isCurrentWordValid == true
 
     val isAbleToDrawStones: Boolean
-        get() = stonesInBag.isNotEmpty() && stonesInHand.size < 7 && unlockedStonesOnBoard.isEmpty()
+        get() = stonesInBag.isNotEmpty() &&
+                stonesInHand.size < HAND_SIZE &&
+                unlockedStonesOnBoard.isEmpty()
 
     val hasUnlockedStones: Boolean
         get() = unlockedStonesOnBoard.isNotEmpty()
@@ -427,7 +418,9 @@ data class GameState(
         }
         return copy(
             stonesInHand = updatedStonesInHand,
-            stonesOnBoard = if (stone is StoneOnBoard) stonesOnBoard + movedStone - stone else stonesOnBoard + movedStone
+            // Remove first, then add: dropping a stone back on its own field makes
+            // `movedStone == stone`, and adding before removing would delete it.
+            stonesOnBoard = if (stone is StoneOnBoard) stonesOnBoard - stone + movedStone else stonesOnBoard + movedStone
         )
     }
 
@@ -435,7 +428,7 @@ data class GameState(
 
     fun asSavedGame(): SavedGame = SavedGame(
         gameModeId = gameMode.id,
-        levelIndex = if (gameMode is GameMode.Trails) gameMode.level.index else -1,
+        levelIndex = gameMode.levelKey,
         totalPoints = totalPoints,
         stonesInHand = stonesInHand,
         stonesOnBoard = stonesOnBoard,
@@ -452,13 +445,25 @@ data class SavedGame(
     val stonesOnBoard: Set<StoneOnBoard>,
     val stonesInBag: Set<StoneInBag>,
 ) {
-    fun asGameState(): GameState = GameState(
-        gameMode = GameMode.fromId(gameModeId, trailLevels.find { it.index == levelIndex }),
-        totalPoints = totalPoints,
-        stonesInHand = stonesInHand,
-        stonesOnBoard = stonesOnBoard,
-        stonesInBag = stonesInBag,
-    )
+    /**
+     * The saved game as playable state, or `null` when it names a game mode or level
+     * this build no longer has. Restoring it onto some other level would both show the
+     * wrong board and overwrite that level's own save.
+     */
+    fun asGameState(): GameState? {
+        val gameMode = GameMode.fromId(
+            id = gameModeId,
+            trailLevel = trailLevels.find { it.index == levelIndex },
+        ) ?: return null
+
+        return GameState(
+            gameMode = gameMode,
+            totalPoints = totalPoints,
+            stonesInHand = stonesInHand,
+            stonesOnBoard = stonesOnBoard,
+            stonesInBag = stonesInBag,
+        )
+    }
 }
 
 sealed interface GameEvent {

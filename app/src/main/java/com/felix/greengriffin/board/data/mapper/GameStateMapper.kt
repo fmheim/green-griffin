@@ -4,11 +4,19 @@ import com.felix.greengriffin.board.data.local.GameStateEntity
 import com.felix.greengriffin.board.presentation.SavedGame
 import kotlinx.serialization.json.Json
 
+/**
+ * Tolerates fields a newer build wrote and an older one does not know, so that adding
+ * state to [SavedGame] does not invalidate everybody's saved games.
+ */
+private val savedGameJson = Json { ignoreUnknownKeys = true }
 
-fun SavedGame.toEntity() : GameStateEntity = GameStateEntity(
+fun SavedGame.toEntity(): GameStateEntity = GameStateEntity(
     gameModeId = gameModeId,
-    level = levelIndex ?: -1,
-    gameStateJson = Json.encodeToString(this),
+    level = levelIndex,
+    gameStateJson = savedGameJson.encodeToString(this),
 )
 
-fun GameStateEntity.toSavedGame() : SavedGame = Json.decodeFromString(gameStateJson)
+/** The stored game, or `null` when the row cannot be read back as one. */
+fun GameStateEntity.toSavedGame(): SavedGame? = runCatching {
+    savedGameJson.decodeFromString<SavedGame>(gameStateJson)
+}.getOrNull()

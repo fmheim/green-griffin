@@ -21,7 +21,7 @@ class GameStateRepository @Inject constructor(
         return gameStateEntity.toSavedGame()
     }
 
-    suspend fun clearGameState(gameModeId: Int, level: Int?) {
+    suspend fun clearGameState(gameModeId: Int, level: Int) {
         gameStateDao.clearGameState(gameModeId = gameModeId, level  = level)
     }
 }

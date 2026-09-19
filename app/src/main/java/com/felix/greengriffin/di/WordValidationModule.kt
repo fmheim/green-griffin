@@ -12,6 +12,6 @@ import dagger.hilt.components.SingletonComponent
 abstract class WordValidationModule {
 
     @Binds
-    abstract fun bindWordLookUp(localWordRepository: LocalWordRepository): WordRepository
+    abstract fun bindWordRepository(localWordRepository: LocalWordRepository): WordRepository
 
 }
