@@ -37,8 +37,8 @@ import androidx.compose.ui.window.DialogProperties
 import com.felix.greengriffin.board.domain.model.StoneInBag
 import com.felix.greengriffin.board.domain.model.germanAlphabet
 import com.felix.greengriffin.core.presentation.theme.GreenGriffinTheme
-import kotlin.math.absoluteValue
 import java.util.UUID
+import kotlin.math.absoluteValue
 
 @Composable
 fun StoneSelector(

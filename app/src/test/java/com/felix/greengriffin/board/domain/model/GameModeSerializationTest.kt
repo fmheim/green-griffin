@@ -6,9 +6,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * The navigation back stack and dragged stones are persisted as the serialized form of
- * these hierarchies, so their type discriminators must survive the move out of
- * `board.presentation`. These are the names the classes had there.
+ * The type discriminators of these hierarchies must survive the move out of
+ * `board.presentation`, so that any already serialized form stays readable. These are the
+ * names the classes had there.
  */
 class GameModeSerializationTest {
 
@@ -44,6 +44,33 @@ class GameModeSerializationTest {
                     """"letter":"A","value":1,"id":"id","userId":1}""",
             Json.encodeToString<StoneData>(
                 StoneInHand(letter = 'A', value = 1, id = "id", userId = 1)
+            ),
+        )
+    }
+
+    @Test
+    fun `a stone in the bag keeps its serial name`() {
+        assertEquals(
+            """{"type":"com.felix.greengriffin.board.presentation.components.StoneInBag",""" +
+                    """"letter":"A","value":1,"id":"id"}""",
+            Json.encodeToString<StoneData>(StoneInBag(letter = 'A', value = 1, id = "id")),
+        )
+    }
+
+    @Test
+    fun `a stone on the board keeps its serial name`() {
+        assertEquals(
+            """{"type":"com.felix.greengriffin.board.presentation.components.StoneOnBoard",""" +
+                    """"letter":"A","value":1,"id":"id","rowIndex":1,"columnIndex":2,"isLocked":true}""",
+            Json.encodeToString<StoneData>(
+                StoneOnBoard(
+                    letter = 'A',
+                    value = 1,
+                    id = "id",
+                    rowIndex = 1,
+                    columnIndex = 2,
+                    isLocked = true,
+                )
             ),
         )
     }

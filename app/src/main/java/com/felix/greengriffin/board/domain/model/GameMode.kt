@@ -6,8 +6,10 @@ import kotlinx.serialization.Serializable
 
 /**
  * Serial names are pinned to the class names this hierarchy had before it moved out of
- * `board.presentation`. The navigation back stack persists a serialized [GameMode], so
- * changing them would make a back stack written by an older build unreadable.
+ * `board.presentation`, so that any already serialized form stays readable. Nothing this
+ * app writes to disk encodes a [GameMode] today - saved games are keyed by [id] and
+ * [levelKey] - but the navigation back stack does serialize one into saved instance state,
+ * and pinning the names costs nothing.
  */
 @Serializable
 @SerialName("com.felix.greengriffin.board.presentation.GameMode")
