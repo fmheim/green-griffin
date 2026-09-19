@@ -33,7 +33,7 @@ com.felix.greengriffin/
 ├── HomeScreen.kt
 ├── GreenGriffinApp.kt     # @HiltAndroidApp
 ├── board/                 # core board game (shared by FreePlay and Trails)
-│   ├── data/local/        # Room: AppDatabase, entities, DAOs
+│   ├── data/local/        # Room: DictionaryDatabase, UserDatabase, entities, DAOs
 │   ├── data/mapper/
 │   ├── data/repository/   # LocalWordRepository, GameStateRepository, CompletedLevelsRepository
 │   ├── domain/            # WordRepository interface
@@ -78,21 +78,38 @@ New features go in their own top-level package (`feature/{data,domain,presentati
 
 ### DI (Hilt)
 - `AppModule`: `GenerativeModel` (Gemini, currently unused by app code).
-- `DatabaseModule`: `AppDatabase` singleton and DAOs.
+- `DatabaseModule`: `DictionaryDatabase` and `UserDatabase` singletons and their DAOs.
 - `WordValidationModule`: `@Binds LocalWordRepository → WordRepository`.
 - Classes with an `@Inject` constructor need no module entry; add `@Binds` only for interface → implementation.
 
 ## Database (Room) — read before changing entities
 
-`AppDatabase` is a **single database file** (`dictionary.db`) holding both the bundled dictionary and user data:
-- `DictionaryWord` — words with `language` (`"de"`, `"sv"`), pre-populated via `createFromAsset("dictionary.db")` from `app/src/main/assets/dictionary.db`.
-- `GameStateEntity` — saved games per game mode / trail level.
-- `CompletedLevelEntity` — Trails progress.
+There are **two** databases, split so that a dictionary schema change can never touch user data:
 
-It is built with `fallbackToDestructiveMigration(dropAllTables = true)` and `exportSchema = false`. Consequences:
-- Bumping `version` without a `Migration` **wipes all saved games and level progress**, then re-copies the asset. Only do this if losing user data is acceptable; otherwise add a `Migration(n, n+1)` via `.addMigrations(...)`.
-- Room validates that the asset's schema matches the entities. Changing `DictionaryWord` (or any table the asset contains) requires regenerating `assets/dictionary.db` with the matching schema and version.
-- Before adding real migrations, enable schema export (Room Gradle plugin, `room { schemaDirectory("$projectDir/schemas") }`, `exportSchema = true`) and commit the `schemas/` JSON so migrations can be tested with `MigrationTestHelper`.
+**`DictionaryDatabase`** (`dictionary_cache.db`) — read-only, one entity:
+- `DictionaryWord` — words with `language` (`"de"`, `"sv"`), pre-populated via
+  `createFromAsset("dictionary.db")` from `app/src/main/assets/dictionary.db` (~29 MB).
+- Built with `fallbackToDestructiveMigration(dropAllTables = true)` and `exportSchema = false`. That
+  is fine: it is a rebuildable cache, so bumping `version` just re-copies the asset.
+- Room validates that the asset's schema matches `DictionaryWord`, so changing that entity requires
+  regenerating `assets/dictionary.db` with a matching schema.
+- The on-device file is deliberately **not** called `dictionary.db` — that name belongs to the old
+  combined database, whose Room identity hash no longer matches.
+- Excluded from Auto Backup (see below).
+
+**`UserDatabase`** (`user_data.db`) — a few kilobytes, two entities:
+- `GameStateEntity` — saved games per game mode / trail level.
+- `CompletedLevelEntity` — Trails progress (table `completed_levels`).
+- **No `fallbackToDestructiveMigration`.** Every schema change needs a real `Migration` added via
+  `.addMigrations(...)`, or the app will crash on upgrade instead of silently wiping progress.
+- `exportSchema = true`; the Room Gradle plugin writes `app/schemas/<db>/<version>.json` and those
+  files are **committed**, so migrations can be tested with `MigrationTestHelper`
+  (`app/src/androidTest/.../UserDatabaseMigrationTest.kt`). Commit the new JSON with every bump.
+
+**Auto Backup:** `allowBackup="true"` in the manifest, so `res/xml/data_extraction_rules.xml`
+(API 31+, the one that applies at `minSdk 33`) and `res/xml/backup_rules.xml` exclude the dictionary
+databases. `user_data.db` is included — keep it that way; the dictionary alone exceeds the 25 MB
+Auto Backup quota and would make the whole backup fail.
 
 ## AI (Gemini)
 

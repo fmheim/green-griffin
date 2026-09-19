@@ -65,7 +65,7 @@ adb shell cmd locale set-app-locales com.felix.greengriffin --locales de-DE   # 
 
 ## Database (Room)
 
-`dictionary.db` holds the bundled dictionary (about 29 MB) and the user data in the `game_state` and `completed_levels` tables. The app opens it in WAL mode, so recent writes may exist only in `dictionary.db-wal`. `pull-db.sh` copies all three files, and `query-db.py` reads them together.
+`user_data.db` holds the user data (`game_state` and `completed_levels`); `dictionary_cache.db` holds the bundled dictionary (about 29 MB). The app opens them in WAL mode, so recent writes may exist only in `user_data.db-wal`. `pull-db.sh` copies all three files, and `query-db.py` reads them together.
 
 ```bash
 db=$(bash .claude/skills/test-on-device/scripts/pull-db.sh | tail -1)
@@ -88,11 +88,11 @@ Only restore into an app with the same Room `version`. Force-stop the app first 
 ```bash
 adb shell am force-stop com.felix.greengriffin
 b=build/test-on-device/db/backup-before-uninstall
-for f in dictionary.db dictionary.db-wal dictionary.db-shm; do
+for f in user_data.db user_data.db-wal user_data.db-shm; do
   [ -f "$b/$f" ] && adb shell "run-as com.felix.greengriffin sh -c 'cat > databases/$f'" < "$b/$f"
 done
 # A backup without a -wal file must not be combined with the device's stale WAL:
-[ -f "$b/dictionary.db-wal" ] || adb shell run-as com.felix.greengriffin rm -f databases/dictionary.db-wal databases/dictionary.db-shm
+[ -f "$b/user_data.db-wal" ] || adb shell run-as com.felix.greengriffin rm -f databases/user_data.db-wal databases/user_data.db-shm
 ```
 Then launch the app and check the overview query.
 

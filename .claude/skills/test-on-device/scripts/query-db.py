@@ -1,7 +1,7 @@
 """Runs SQL against a database pulled with pull-db.sh and prints the result.
 
-    py query-db.py <path/to/dictionary.db>              # overview of user data
-    py query-db.py <path/to/dictionary.db> "<SQL>"      # arbitrary query
+    py query-db.py <path/to/user_data.db>              # overview of user data
+    py query-db.py <path/to/user_data.db> "<SQL>"      # arbitrary query
 
 Use `py` on Windows, `python3` elsewhere. Python 3.7 compatible (standard
 library only). If the local SQLite lacks JSON1 (e.g. Python 3.7 on Windows),
@@ -18,8 +18,6 @@ import sys
 
 OVERVIEW = [
     ("tables", "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"),
-    ("dictionary words per language",
-     "SELECT language, COUNT(*) AS words FROM dictionary GROUP BY language"),
     ("completed_levels", "SELECT * FROM completed_levels ORDER BY game_mode_id, level_index"),
     ("game_state",
      "SELECT game_mode_id, level, datetime(updated_at / 1000, 'unixepoch') AS updated_utc, "
