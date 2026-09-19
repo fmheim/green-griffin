@@ -439,7 +439,9 @@ data class GameState(
         }
         return copy(
             stonesInHand = updatedStonesInHand,
-            stonesOnBoard = if (stone is StoneOnBoard) stonesOnBoard + movedStone - stone else stonesOnBoard + movedStone
+            // Remove first, then add: dropping a stone back on its own field makes
+            // `movedStone == stone`, and adding before removing would delete it.
+            stonesOnBoard = if (stone is StoneOnBoard) stonesOnBoard - stone + movedStone else stonesOnBoard + movedStone
         )
     }
 
