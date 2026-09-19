@@ -1,0 +1,75 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "baff139a5f26eb272901a5154a4e339e",
+    "entities": [
+      {
+        "tableName": "game_state",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`game_mode_id` INTEGER NOT NULL, `level` INTEGER NOT NULL, `game_state_json` TEXT NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`game_mode_id`, `level`))",
+        "fields": [
+          {
+            "fieldPath": "gameModeId",
+            "columnName": "game_mode_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "level",
+            "columnName": "level",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gameStateJson",
+            "columnName": "game_state_json",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "game_mode_id",
+            "level"
+          ]
+        }
+      },
+      {
+        "tableName": "completed_levels",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`game_mode_id` INTEGER NOT NULL, `level_index` INTEGER NOT NULL, PRIMARY KEY(`game_mode_id`, `level_index`))",
+        "fields": [
+          {
+            "fieldPath": "gameModeId",
+            "columnName": "game_mode_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "levelIndex",
+            "columnName": "level_index",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "game_mode_id",
+            "level_index"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'baff139a5f26eb272901a5154a4e339e')"
+    ]
+  }
+}

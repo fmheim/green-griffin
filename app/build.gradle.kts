@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.room)
 }
 
 android {
@@ -43,6 +44,10 @@ android {
         compose = true
         buildConfig = true
     }
+}
+
+room {
+    schemaDirectory("$projectDir/schemas")
 }
 
 // jvmTarget is inherited from android.compileOptions.targetCompatibility
@@ -87,6 +92,7 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.room.ktx)
     testImplementation(libs.androidx.room.testing)
+    androidTestImplementation(libs.androidx.room.testing)
 
     // Navigation3
     implementation(libs.androidx.navigation3.runtime)

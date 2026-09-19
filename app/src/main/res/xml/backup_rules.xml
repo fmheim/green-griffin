@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older that API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+   Auto Backup rules for API 30 and below (this app has minSdk 33, so in practice
+   res/xml/data_extraction_rules.xml is the file that applies). Kept in sync with it.
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <!-- The dictionary is a ~29 MB rebuildable cache copied from assets; backing it up blows
+         the 25 MB Auto Backup quota and makes the whole backup fail. -->
+    <exclude domain="database" path="dictionary_cache.db" />
+    <exclude domain="database" path="dictionary_cache.db-wal" />
+    <exclude domain="database" path="dictionary_cache.db-shm" />
+    <!-- Leftover from the pre-split combined dictionary + user database. -->
+    <exclude domain="database" path="dictionary.db" />
+    <exclude domain="database" path="dictionary.db-wal" />
+    <exclude domain="database" path="dictionary.db-shm" />
 </full-backup-content>

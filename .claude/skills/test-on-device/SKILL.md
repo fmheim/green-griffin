@@ -61,9 +61,9 @@ Apps installed from Android Studio are marked test-only, so plain `adb install` 
 1. Back up the database: `bash .claude/skills/test-on-device/scripts/pull-db.sh build/test-on-device/db/backup-before-uninstall`.
 2. Ask the user whether to uninstall. Uninstalling wipes saved games and progress.
 3. `adb uninstall com.felix.greengriffin`, install, then launch the app once so Room creates the database.
-4. If the user wants the data back, restore the backup as shown in [references/debugging.md](references/debugging.md#restore-a-database-backup). Restore it only if the Room `version` in `AppDatabase` did not change.
+4. If the user wants the data back, restore the backup as shown in [references/debugging.md](references/debugging.md#restore-a-database-backup). Restore it only if the Room `version` in `UserDatabase` did not change.
 
-**Room version bump:** if the diff changes `version` in `board/data/local/AppDatabase.kt` without a `Migration`, `fallbackToDestructiveMigration` wipes user data on first launch. Back up the DB before installing, and tell the user this will happen.
+**Room version bump:** if the diff changes `version` in `board/data/local/UserDatabase.kt` without a `Migration`, the app crashes on first launch (there is deliberately no destructive fallback on the user database). Back up the DB before installing, and tell the user this will happen.
 
 ## 4. Exercise the app
 
@@ -87,7 +87,7 @@ Check the relevant signals after every meaningful step, not only at the end.
 
 - **Crashes and errors:** `adb logcat -d -b crash`, and `adb logcat -d --pid=<pid> '*:W'` for app warnings and errors. If `pidof` returns nothing after an action, the app died. Read the crash buffer.
 - **App logs:** `adb logcat -d --pid=<pid>`, or filter by tag: `adb logcat -d -s GGDBG:V AndroidRuntime:E`.
-- **Database:** Room keeps saved games (`game_state`, one JSON blob per game mode/level) and Trails progress (`completed_levels`) in `dictionary.db`.
+- **Database:** Room keeps saved games (`game_state`, one JSON blob per game mode/level) and Trails progress (`completed_levels`) in `user_data.db`; the word list lives separately in `dictionary_cache.db`.
   ```bash
   db=$(bash .claude/skills/test-on-device/scripts/pull-db.sh | tail -1)
   py .claude/skills/test-on-device/scripts/query-db.py "$db"            # overview
