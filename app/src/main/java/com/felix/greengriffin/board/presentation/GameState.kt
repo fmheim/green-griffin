@@ -46,7 +46,7 @@ val trailLevels = setOf(
         index = 3,
         boardSize = 10,
         startFields = List(6) { Field(row = it, column = 0) }.toSet(),
-        goalFields = List(6) { Field(row = it + 5, column = 9) }.toSet(),
+        goalFields = List(6) { Field(row = it + 4, column = 9) }.toSet(),
         blockedField = setOf(),
     ),
 
