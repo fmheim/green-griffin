@@ -58,7 +58,13 @@ class WordPlacementViewModel @AssistedInject constructor(
     private suspend fun loadInitialGameState() {
         val savedState = loadSavedState()
         when {
-            savedState != null -> _state.update { savedState }
+            savedState != null -> {
+                _state.update { savedState }
+                // Whether the restored placement is valid is derived state and is
+                // deliberately not persisted, so it has to be recomputed here.
+                if (savedState.hasUnlockedStones) revalidatePlacement()
+            }
+
             else -> initializeNewGame()
         }
     }
@@ -212,6 +218,11 @@ class WordPlacementViewModel @AssistedInject constructor(
     }
 
     private fun onStoneMovedToBoard() {
+        revalidatePlacement()
+        saveGameState()
+    }
+
+    private fun revalidatePlacement() {
         val placementValidation = isPlacementValid(
             stonesOnBoard = _state.value.stonesOnBoard,
             gameMode = _state.value.gameMode,
@@ -219,7 +230,6 @@ class WordPlacementViewModel @AssistedInject constructor(
         val isValidPlacement = placementValidation is PlacementValidation.Valid
 
         _state.update { it.copy(isValidPlacement = isValidPlacement) }
-        saveGameState()
 
         if (isValidPlacement) {
             val words = _state.value.newlyCreatedWordsAsStrings
