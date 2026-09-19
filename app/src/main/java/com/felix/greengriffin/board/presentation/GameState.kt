@@ -95,20 +95,17 @@ sealed interface GameMode {
 
         /** Level key of a game mode that has no levels. Persisted, so it must not change. */
         const val NO_LEVEL = -1
+        /**
+         * The mode a persisted id refers to, or `null` when it refers to nothing this
+         * build knows about. Callers discard such data instead of guessing a mode.
+         */
         fun fromId(
             id: Int,
             trailLevel: TrailLevel? = null,
-        ): GameMode = when (id) {
+        ): GameMode? = when (id) {
             FREE_PLAY_ID -> FreePlay
-            TRAILS_ID -> {
-                if (trailLevel != null) {
-                    Trails(trailLevel)
-                } else {
-                    Trails(trailLevels.first())
-                }
-            }
-
-            else -> error("Unknown GameMode id: $id, level: $trailLevel")
+            TRAILS_ID -> trailLevel?.let(::Trails)
+            else -> null
         }
     }
 }
@@ -470,13 +467,25 @@ data class SavedGame(
     val stonesOnBoard: Set<StoneOnBoard>,
     val stonesInBag: Set<StoneInBag>,
 ) {
-    fun asGameState(): GameState = GameState(
-        gameMode = GameMode.fromId(gameModeId, trailLevels.find { it.index == levelIndex }),
-        totalPoints = totalPoints,
-        stonesInHand = stonesInHand,
-        stonesOnBoard = stonesOnBoard,
-        stonesInBag = stonesInBag,
-    )
+    /**
+     * The saved game as playable state, or `null` when it names a game mode or level
+     * this build no longer has. Restoring it onto some other level would both show the
+     * wrong board and overwrite that level's own save.
+     */
+    fun asGameState(): GameState? {
+        val gameMode = GameMode.fromId(
+            id = gameModeId,
+            trailLevel = trailLevels.find { it.index == levelIndex },
+        ) ?: return null
+
+        return GameState(
+            gameMode = gameMode,
+            totalPoints = totalPoints,
+            stonesInHand = stonesInHand,
+            stonesOnBoard = stonesOnBoard,
+            stonesInBag = stonesInBag,
+        )
+    }
 }
 
 sealed interface GameEvent {

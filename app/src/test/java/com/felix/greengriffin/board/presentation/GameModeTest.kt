@@ -1,6 +1,7 @@
 package com.felix.greengriffin.board.presentation
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class GameModeTest {
@@ -33,7 +34,44 @@ class GameModeTest {
         val modes = listOf(GameMode.FreePlay) + trailLevels.map { GameMode.Trails(it) }
         modes.forEach { mode ->
             val restored = GameState(gameMode = mode).asSavedGame().asGameState()
-            assertEquals(mode, restored.gameMode)
+            assertEquals(mode, restored?.gameMode)
         }
+    }
+
+    @Test
+    fun `a saved game naming an unknown level is discarded`() {
+        val saved = SavedGame(
+            gameModeId = GameMode.TRAILS_ID,
+            levelIndex = 999,
+            totalPoints = 42,
+            stonesInHand = emptyList(),
+            stonesOnBoard = emptySet(),
+            stonesInBag = emptySet(),
+        )
+
+        assertNull(
+            "a board from a level this build does not have must not be loaded onto another level",
+            saved.asGameState(),
+        )
+    }
+
+    @Test
+    fun `a saved game naming an unknown game mode is discarded`() {
+        val saved = SavedGame(
+            gameModeId = 99,
+            levelIndex = GameMode.NO_LEVEL,
+            totalPoints = 0,
+            stonesInHand = emptyList(),
+            stonesOnBoard = emptySet(),
+            stonesInBag = emptySet(),
+        )
+
+        assertNull(saved.asGameState())
+    }
+
+    @Test
+    fun `an unknown id does not resolve to a game mode`() {
+        assertNull(GameMode.fromId(id = 99))
+        assertNull(GameMode.fromId(id = GameMode.TRAILS_ID, trailLevel = null))
     }
 }
