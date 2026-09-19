@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop]
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+# A new push to the same PR/branch cancels the build that is still running.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build & test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write # to post the APK download comment
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          # Only builds on develop write the cache; PR builds reuse it.
+          cache-read-only: ${{ github.ref != 'refs/heads/develop' }}
+
+      - name: Write local.properties
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "::warning::GEMINI_API_KEY secret is not available, building with a placeholder key."
+            GEMINI_API_KEY=placeholder
+          fi
+          printf 'apiKey=%s\n' "$GEMINI_API_KEY" > local.properties
+
+      - name: Build debug APK and run unit tests
+        run: ./gradlew assembleDebug testDebugUnitTest
+
+      - name: Rename APK
+        id: apk
+        env:
+          # On PRs github.sha is the temporary merge commit; use the PR head instead.
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ -n "$PR_NUMBER" ]; then
+            SUFFIX="pr${PR_NUMBER}-${SHA:0:7}"
+          else
+            SUFFIX="${GITHUB_REF_NAME//\//-}-${SHA:0:7}"
+          fi
+          NAME="green-griffin-${SUFFIX}"
+          mv app/build/outputs/apk/debug/app-debug.apk "${NAME}.apk"
+          echo "name=${NAME}" >> "$GITHUB_OUTPUT"
+          echo "size=$(du -h "${NAME}.apk" | cut -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK
+        id: upload
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ steps.apk.outputs.name }}
+          path: ${{ steps.apk.outputs.name }}.apk
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: test-reports
+          path: app/build/reports/tests/
+          retention-days: 7
+
+      - name: Comment APK link on PR
+        # Fork PRs get a read-only token, so they cannot comment.
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@v8
+        env:
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+          APK_NAME: ${{ steps.apk.outputs.name }}
+          APK_SIZE: ${{ steps.apk.outputs.size }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        with:
+          script: |
+            const marker = '<!-- ci-apk-comment -->';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              marker,
+              '### 📦 Debug APK',
+              '',
+              `**[Download ${process.env.APK_NAME}.apk](${process.env.ARTIFACT_URL})** (${process.env.APK_SIZE}, zipped)`,
+              '',
+              `Built from ${process.env.HEAD_SHA.substring(0, 7)} · [workflow run](${runUrl}) · available for 7 days.`,
+              '',
+              '<sub>Downloading requires being signed in to GitHub. Unzip, then install the APK (allow installs from unknown sources).</sub>',
+            ].join('\n');
+
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+            const existing = comments.find(c => c.user.type === 'Bot' && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
