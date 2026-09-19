@@ -14,7 +14,4 @@ interface GameStateDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertGameState(gameState: GameStateEntity)
 
-    @Query("DELETE FROM game_state WHERE game_mode_id = :gameModeId AND level = :level ")
-    suspend fun clearGameState(gameModeId: Int, level: Int)
-
 }
