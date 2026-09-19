@@ -20,6 +20,8 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,6 +48,9 @@ class WordPlacementViewModel @AssistedInject constructor(
 
     private val _state = MutableStateFlow(value = GameState(gameMode = navKey.gameMode))
     val state: StateFlow<GameState> = _state.asStateFlow()
+
+    /** Dictionary lookup for the placement currently on the board. */
+    private var wordValidationJob: Job? = null
 
 
     init {
@@ -284,13 +289,16 @@ class WordPlacementViewModel @AssistedInject constructor(
         _state.update { it.copy(isPromptLoading = true, isCurrentWordValid = null) }
         saveGameState()
 
-        viewModelScope.launch(Dispatchers.IO) {
+        wordValidationJob?.cancel()
+        wordValidationJob = viewModelScope.launch(Dispatchers.IO) {
             val wordValidation = areWordsValid(
                 words = words,
                 allowedLanguages = listOf("sv", "de") // todo: specify languages from settings
             )
 
-            println("WordValidation: $wordValidation")
+            // The board may have changed while the lookup was running; a result for a
+            // placement that no longer exists must not decide whether this one is valid.
+            ensureActive()
 
             _state.update {
                 it.copy(
